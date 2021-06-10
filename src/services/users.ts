@@ -35,6 +35,8 @@ export default class UserService {
         avatar: true,
         email: true,
         mobile: true,
+        user_state: true,
+        screen_state: true,
         created_at: true,
         updated_at: true,
       },

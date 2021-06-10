@@ -9,12 +9,29 @@ import {
   HttpError,
   JsonController,
 } from "routing-controllers";
+import UserService from "../../services/users";
+import Container from "typedi";
+import { Logger } from "winston";
 
 @JsonController("/v1")
 export class UserController {
   @Get("/users")
-  getAll() {
-    throw new HttpError(301, "test");
+  async getAll() {
+    const logger: Logger = Container.get("logger");
+    logger.debug(`Getting user list`);
+
+    try {
+      const userService: UserService = Container.get(UserService);
+      const users = await userService.ListUsers();
+
+      return {
+        status: true,
+        data: users,
+      };
+    } catch (e) {
+      logger.error("🔥 error: %o", e);
+      throw e;
+    }
   }
 
   @Get("/users/:id")

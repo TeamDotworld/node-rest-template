@@ -1,5 +1,7 @@
-import config from "../config";
 import { Twilio } from "twilio";
+
+import config from "../config";
+import Logger from "./logger";
 
 // Initialize Twilio client
 const getTwilioClient = () => {
@@ -13,6 +15,8 @@ const getTwilioClient = () => {
   let twilio = new Twilio(config.twilio.api_key, config.twilio.api_secret, {
     accountSid: config.twilio.account_sid,
   });
+
+  Logger.info("📱 Twilio Loaded");
   return twilio;
 };
 

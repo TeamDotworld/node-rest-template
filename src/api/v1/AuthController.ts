@@ -13,6 +13,7 @@ import {
   UnauthorizedError,
   Patch,
   BodyParam,
+  OnUndefined,
 } from "routing-controllers";
 import AuthService from "../../services/auth";
 import { LoginDTO, ResetDTO } from "../../interface/inputs/auth";
@@ -65,6 +66,7 @@ export class AuthController {
   }
 
   @Get("/pk")
+  @OnUndefined(503)
   async getPublicKey() {
     const logger: Logger = Container.get("logger");
     try {

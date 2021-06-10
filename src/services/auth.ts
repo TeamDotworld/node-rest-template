@@ -11,7 +11,7 @@ let eventDispatcher = new EventDispatcher();
 
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { UnauthorizedError } from "routing-controllers";
+import { HttpError, UnauthorizedError } from "routing-controllers";
 import { UserNotFoundError } from "../api/errors/UserNotFoundError";
 
 const prisma = new PrismaClient();
@@ -107,6 +107,10 @@ export default class AuthService {
   }
 
   public GetPk(): string {
-    return config.keys.public.replace(/\\n/gm, "\n");
+    try {
+      return config.keys.public.replace(/\\n/gm, "\n");
+    } catch (e) {
+      throw new HttpError(503, "Unable to get public key");
+    }
   }
 }

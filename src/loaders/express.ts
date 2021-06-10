@@ -4,9 +4,9 @@ import { useExpressServer } from "routing-controllers";
 import cors from "cors";
 import passport from "passport";
 
-import middleware from "../middlewares";
-
+import Logger from "./logger";
 import v1controllers from "../api/v1";
+import middleware from "../middlewares";
 import { LoggingMiddleware } from "../middlewares/LoggingMiddleware";
 import { CustomErrorHandler } from "../middlewares/ExpressErrorMiddlewareInterface";
 
@@ -62,4 +62,5 @@ export default ({ app }: { app: Express }) => {
     }
     res.end();
   });
+  Logger.info("🕸 Booting up express...");
 };

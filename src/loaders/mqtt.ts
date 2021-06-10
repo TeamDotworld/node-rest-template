@@ -37,7 +37,7 @@ export class MqttHandler {
 
     // Connection callback
     this.mqttClient.on("connect", () => {
-      Logger.info(`🦾 MQTT client connected`);
+      Logger.info(`🤝 MQTT client connected`);
       this.mqttClient.subscribe(config.mqtt.subscription.split(","), {
         qos: 0,
       });
