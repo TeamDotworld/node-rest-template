@@ -1,4 +1,4 @@
-import { IUser } from "@interface/User";
+import { IUser } from "../interface/User";
 import { EventSubscriber, On } from "event-dispatch";
 
 import events from "./events";

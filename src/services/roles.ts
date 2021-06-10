@@ -3,10 +3,9 @@ import { Logger } from "winston";
 import { PrismaClient, Role } from "@prisma/client";
 import { EventDispatcher } from "event-dispatch";
 
-import config from "@config";
+import config from "../config";
 import events from "../subscribers/events";
-import { RoleCreateInput } from "@interface/Role";
-import permissions from "@permission";
+import { RoleCreateInput } from "../interface/Role";
 
 let eventDispatcher = new EventDispatcher();
 

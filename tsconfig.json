@@ -18,13 +18,6 @@
     "lib": ["es2015"],
     "typeRoots": ["./src/types"],
     "paths": {
-      "@api/*": ["api/*"],
-      "@middleware/*": ["api/middlewares/*"],
-      "@helpers/*": ["helpers/*"],
-      "@service/*": ["services/*"],
-      "@interface/*": ["interface/*"],
-      "@config": ["config/index"],
-      "@permission": ["config/permissions"],
       "*": ["node_modules/*", "src/interface/*"]
     }
   },

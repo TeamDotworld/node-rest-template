@@ -1,14 +1,15 @@
-import express from "express";
+import express, { Express } from "express";
 import cors from "cors";
 import passport from "passport";
 
 const { isCelebrateError, errors } = require("celebrate");
 
-import v1Routes from "../api/v1";
-import config from "@config";
 import middleware from "../api/middlewares";
 
-export default ({ app }: { app: express.Application }) => {
+import { useExpressServer } from "routing-controllers";
+import v1controllers from "../api/v1";
+
+export default ({ app }: { app: Express }) => {
   app.get("/status", (req, res) => {
     res.status(200).end();
   });
@@ -42,9 +43,10 @@ export default ({ app }: { app: express.Application }) => {
   middleware.auth(passport);
 
   // Load API routes
-  app.use(config.api.v1.user, v1Routes.v1User());
-  app.use(config.api.v1.admin, v1Routes.v1Admin());
-  app.use(config.api.v1.device, v1Routes.v1Device());
+  useExpressServer(app, {
+    routePrefix: "/api",
+    controllers: [...v1controllers],
+  });
 
   /// catch 404
   app.use((req, res) => {

@@ -4,14 +4,14 @@ import { PrismaClient, Role, User } from "@prisma/client";
 import { EventDispatcher } from "event-dispatch";
 
 import bcrypt from "bcrypt";
-import config from "@config";
+import config from "../config";
 import events from "../subscribers/events";
 import {
   UserCreateInputDTO,
   UserListDTO,
   UserUpdateDTO,
   UserFcmOutputDTO,
-} from "@interface/User";
+} from "../interface/User";
 import { throws } from "assert";
 import { use } from "passport";
 

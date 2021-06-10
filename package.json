@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "nodemon",
-    "prod": "node -r ts-node/register/transpile-only -r tsconfig-paths/register ./dist/app.js",
+    "prod": "node ./dist/app.js",
     "build": "tsc --project ./",
     "deploy": "npx primsa migrate deploy",
     "seed": "npx prisma db seed --preview-feature"
@@ -31,7 +31,10 @@
     "agora-rtc-sdk": "^3.5.2",
     "bcrypt": "^5.0.1",
     "body-parser": "^1.19.0",
+    "bullmq": "^1.33.0",
     "celebrate": "^14.0.0",
+    "class-transformer": "^0.4.0",
+    "class-validator": "^0.13.1",
     "cloudinary": "^1.25.1",
     "cors": "^2.8.5",
     "dotenv": "^9.0.2",
@@ -47,6 +50,7 @@
     "passport-jwt": "^4.0.0",
     "randomstring": "^1.2.1",
     "reflect-metadata": "^0.1.13",
+    "routing-controllers": "^0.9.0",
     "tsconfig-paths": "^3.9.0",
     "twilio": "^3.63.0",
     "twilio-video": "^2.14.0",

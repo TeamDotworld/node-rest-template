@@ -8,9 +8,8 @@ import { StrategyOptions } from "passport-jwt";
 
 import { Logger } from "winston";
 import { Container } from "typedi";
-import { UnauthorizedError } from "@service/auth";
-import permission from "../../config/permissions";
-import config from "@config";
+import { UnauthorizedError } from "../../services/auth";
+import config from "../../config";
 
 var opts: StrategyOptions = {
   secretOrKey: config.keys.public.replace(/\\n/gm, "\n"),
@@ -77,7 +76,7 @@ export const checkRole =
                           name: needRole,
                         },
                         {
-                          name: permission.admin.super,
+                          name: "*",
                         },
                       ],
                     },

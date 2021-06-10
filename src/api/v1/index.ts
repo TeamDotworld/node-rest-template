@@ -1,11 +1,5 @@
-import v1Admin from "./admin";
-import v1User from "./user";
-import v1Device from "./device";
+import { UserController } from "./UserController";
 
-let routes = {
-  v1Admin,
-  v1User,
-  v1Device,
-};
+let controllers = [UserController];
 
-export default routes;
+export default controllers;

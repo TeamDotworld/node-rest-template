@@ -3,7 +3,7 @@ import { Logger } from "winston";
 import { PrismaClient } from "@prisma/client";
 import { EventDispatcher } from "event-dispatch";
 
-import config from "@config";
+import config from "../config";
 import { IUser } from "../interface/User";
 import events from "../subscribers/events";
 
@@ -11,7 +11,6 @@ let eventDispatcher = new EventDispatcher();
 
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import permissions from "../config/permissions";
 
 const prisma = new PrismaClient();
 
@@ -50,7 +49,7 @@ export default class AuthService {
                   some: {
                     permissions: {
                       some: {
-                        name: permissions.admin.super,
+                        name: "*",
                       },
                     },
                   },

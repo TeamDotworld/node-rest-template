@@ -3,7 +3,7 @@ import { RoomInstance } from "twilio/lib/rest/video/v1/room";
 import { Container } from "typedi";
 import multer from "multer";
 
-import config from "@config";
+import config from "../config";
 import AccessToken from "twilio/lib/jwt/AccessToken";
 
 const VideoGrant = AccessToken.VideoGrant;

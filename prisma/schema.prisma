@@ -17,57 +17,28 @@ enum UserStatus {
   LIVE
 }
 
-enum DeviceStatus {
-  ONLINE
-  OFFLINE
-}
-
-enum ContentType {
-  VIDEO
-  IMAGE
-  AUDIO
-}
-
-enum ListingType {
-  PUBLIC
-  UNLISTED
-}
-
-enum WorkType {
-  LIVE
-  CONTENT
-  PLAYLIST
-}
-
 model User {
-  id                  String         @id @default(uuid())
-  email               String         @unique
+  id                  String     @id @default(uuid())
+  email               String     @unique
   first_name          String
-  middle_name         String         @default("")
+  middle_name         String?
   last_name           String?
-  username            String         @unique
+  username            String     @unique
   password            String
-  about               String         @default("")
-  email_verified      Boolean        @default(false)
-  blocked             Boolean        @default(false)
+  about               String     @default("")
+  email_verified      Boolean    @default(false)
+  blocked             Boolean    @default(false)
   last_ip             String?
-  last_login          DateTime       @default(now())
+  last_login          DateTime   @default(now())
   last_password_reset DateTime?
   phone_number        Int?
-  phone_verified      Boolean        @default(false)
-  avatar              String         @default("https://www.gravatar.com/avatar/00000000000000000000000000000000")
-  status              UserStatus     @default(OFFLINE)
+  phone_verified      Boolean    @default(false)
+  avatar              String     @default("https://www.gravatar.com/avatar/00000000000000000000000000000000")
+  status              UserStatus @default(OFFLINE)
   roles               Role[]
-  contents            Content[]
-  comments            Comment[]
-  subscribers         Subscription[] @relation("subscriber")
-  subscribed_to       Subscription[] @relation("subscribedTo")
-  live_stream         LiveStream[]
-  devices             Device[]
   fcm_tokens          String[]
-  likes               Like[]
-  created_at          DateTime       @default(now())
-  updated_at          DateTime       @updatedAt
+  created_at          DateTime   @default(now())
+  updated_at          DateTime   @updatedAt
 }
 
 model Role {
@@ -82,122 +53,6 @@ model Permission {
   id          String @id @default(uuid())
   name        String @unique
   description String
+  route       String
   roles       Role[]
-}
-
-model Device {
-  id                String       @id @default(uuid())
-  name              String
-  token             String       @unique @default(uuid())
-  is_live_supported Boolean      @default(true)
-  status            DeviceStatus @default(OFFLINE)
-  blocked           Boolean      @default(false)
-  users             User[]
-  created_at        DateTime     @default(now())
-  updated_at        DateTime     @updatedAt
-  work_order        WorkOrder?   @relation(fields: [work_order_id], references: [id])
-  work_order_id     String?
-}
-
-model Content {
-  id                String      @id @default(uuid())
-  title             String
-  description       String?
-  original_filename String
-  thumbnail         String
-  url               String
-  user              User        @relation(fields: [user_id], references: [id])
-  user_id           String
-  playlist          Playlist[]
-  mimetype          String?
-  size              String?
-  format            String?
-  type              ContentType
-  listing           ListingType
-  comments          Comment[]
-  likes             Like[]
-  created_at        DateTime    @default(now())
-  updated_at        DateTime    @updatedAt
-}
-
-model Like {
-  id             String      @id @default(uuid())
-  user           User        @relation(fields: [user_id], references: [id])
-  user_id        String
-  content        Content?    @relation(fields: [content_id], references: [id])
-  content_id     String?
-  live           LiveStream? @relation(fields: [live_stream_id], references: [id])
-  live_stream_id String?
-
-  created_at DateTime @default(now())
-
-
-  @@unique([user_id, content_id, live_stream_id], name: "User_Content_Like_Constrain")
-}
-
-model Playlist {
-  id          String    @id @default(uuid())
-  name        String
-  description String?
-  contents    Content[]
-}
-
-model Comment {
-  id         String      @id @default(uuid())
-  created_at DateTime    @default(now())
-  text       String
-  user       User        @relation(fields: [user_id], references: [id])
-  user_id    String
-  content    Content?    @relation(fields: [content_id], references: [id])
-  content_id String?
-  livestream LiveStream? @relation(fields: [live_id], references: [id])
-  live_id    String?
-}
-
-model Subscription {
-  id               String   @id @default(uuid())
-  subscriber       User     @relation(name: "subscriber", fields: [subscriber_id], references: [id])
-  subscriber_id    String
-  subscribed_to    User     @relation(name: "subscribedTo", fields: [subscribed_to_id], references: [id])
-  subscribed_to_id String
-  created_at       DateTime @default(now())
-
-  @@unique([subscriber_id, subscribed_to_id], name: "Subscriber_Subscribed_to_Constrain")
-}
-
-enum LiveType {
-  PUBLIC
-  UNLISTED
-  PRIVATE
-}
-
-model LiveStream {
-  id              String    @id @default(uuid())
-  name            String
-  description     String
-  created_by      User      @relation(fields: [created_user_id], references: [id])
-  created_user_id String
-  room_id         String?
-  started         Boolean   @default(false)
-  start_time      DateTime?
-  end_time        DateTime?
-  ended           Boolean   @default(false)
-  type            LiveType  @default(PRIVATE)
-  preview         String?
-  need_record     Boolean   @default(false)
-  record_url      String?
-  path            String    @unique
-  comments        Comment[]
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
-  like            Like[]
-}
-
-model WorkOrder {
-  id             String    @id @default(uuid())
-  type           WorkType
-  content_id     String
-  device         Device[]
-  schedule_start DateTime  @default(now())
-  schedule_end   DateTime?
 }

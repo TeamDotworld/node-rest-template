@@ -3,9 +3,9 @@ import { Logger } from "winston";
 import { Permission, PrismaClient, User } from "@prisma/client";
 import { EventDispatcher } from "event-dispatch";
 
-import config from "@config";
+import config from "../config";
 import events from "../subscribers/events";
-import { PermissionDTO, PermissionUpdateDTO } from "@interface/Permission";
+import { PermissionDTO, PermissionUpdateDTO } from "../interface/Permission";
 
 let eventDispatcher = new EventDispatcher();
 

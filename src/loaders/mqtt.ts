@@ -1,7 +1,7 @@
 import mqtt, { MqttClient, OnMessageCallback } from "mqtt";
 import onMessage from "../jobs/mqttCallback";
 
-import config from "@config";
+import config from "../config";
 import Logger from "./logger";
 
 export class MqttHandler {
@@ -27,7 +27,7 @@ export class MqttHandler {
       connectTimeout: 10 * 1000,
       username: this.username,
       password: this.password,
-      clientId: "beambox_client_" + Math.random().toString(16).substr(2, 8), // Client ID should be unique
+      clientId: "mqtt_client_" + Math.random().toString(16).substr(2, 8), // Client ID should be unique
     });
 
     // Mqtt error calback
@@ -48,11 +48,7 @@ export class MqttHandler {
     this.mqttClient.on("message", this.onMessage);
 
     this.mqttClient.on("close", () => {
-      Logger.warn(`🦾 MQTT client disconnected`);
-      setTimeout(() => {
-        Logger.info(`🦾 Reconnecting MQTT`);
-        this.connect();
-      }, config.mqtt.reconnect);
+      Logger.warn(`😥 MQTT client disconnected`);
     });
   }
 
