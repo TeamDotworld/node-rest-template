@@ -17,4 +17,13 @@ import Logger from "./loaders/logger";
       Logger.error(err);
       process.exit(1);
     });
+
+  process.on("unhandledRejection", function (reason, p) {
+    Logger.warn(
+      "Possibly Unhandled Rejection at: Promise ",
+      p,
+      " reason: ",
+      reason
+    );
+  });
 })();

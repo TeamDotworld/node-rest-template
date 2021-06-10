@@ -11,21 +11,9 @@ let eventDispatcher = new EventDispatcher();
 
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { UnauthorizedError } from "routing-controllers";
 
 const prisma = new PrismaClient();
-
-export class UnauthorizedError extends Error {
-  status = 500;
-  constructor(message = "user not authorised", status = 401, ...params) {
-    super(...params);
-
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, UnauthorizedError);
-    }
-    this.message = message;
-    this.status = status;
-  }
-}
 
 @Service()
 export default class AuthService {
@@ -34,38 +22,22 @@ export default class AuthService {
   public async SignIn(
     email: string,
     password: string,
-    ip: string | string[] = "unknown",
-    super_admin: boolean = false
+    ip: string | string[] = "unknown"
   ): Promise<{ user: IUser; token: string }> {
-    let user = super_admin
-      ? await prisma.user.findFirst({
-          where: {
-            AND: [
-              {
-                email: email,
-              },
-              {
-                roles: {
-                  some: {
-                    permissions: {
-                      some: {
-                        name: "*",
-                      },
-                    },
-                  },
-                },
-              },
-            ],
-          },
-        })
-      : await prisma.user.findUnique({
-          where: {
+    let user = await prisma.user.findFirst({
+      where: {
+        AND: [
+          {
             email: email,
           },
-        });
-
+          {
+            blocked: false,
+          },
+        ],
+      },
+    });
     if (!user) {
-      throw new UnauthorizedError("Invalid credentials", 401);
+      throw new UnauthorizedError("Invalid login credentials");
     }
     let same = await bcrypt.compare(password, user.password);
     if (same) {
@@ -89,7 +61,7 @@ export default class AuthService {
         token: token,
       };
     } else {
-      throw new UnauthorizedError("Invalid credentials", 401);
+      throw new UnauthorizedError("Invalid login credentials");
     }
   }
 

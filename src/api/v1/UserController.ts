@@ -6,13 +6,15 @@ import {
   Post,
   Put,
   Delete,
+  HttpError,
+  JsonController,
 } from "routing-controllers";
 
-@Controller("/v1")
+@JsonController("/v1")
 export class UserController {
   @Get("/users")
   getAll() {
-    return "This action returns all users";
+    throw new HttpError(301, "test");
   }
 
   @Get("/users/:id")

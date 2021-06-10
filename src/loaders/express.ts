@@ -1,13 +1,14 @@
-import express, { Express } from "express";
+import express, { Express, Request, Response } from "express";
+import { useExpressServer } from "routing-controllers";
+
 import cors from "cors";
 import passport from "passport";
 
-const { isCelebrateError, errors } = require("celebrate");
+import middleware from "../middlewares";
 
-import middleware from "../api/middlewares";
-
-import { useExpressServer } from "routing-controllers";
 import v1controllers from "../api/v1";
+import { LoggingMiddleware } from "../middlewares/LoggingMiddleware";
+import { CustomErrorHandler } from "../middlewares/ExpressErrorMiddlewareInterface";
 
 export default ({ app }: { app: Express }) => {
   app.get("/status", (req, res) => {
@@ -45,48 +46,18 @@ export default ({ app }: { app: Express }) => {
   // Load API routes
   useExpressServer(app, {
     routePrefix: "/api",
+    defaultErrorHandler: true,
     controllers: [...v1controllers],
+    middlewares: [LoggingMiddleware, CustomErrorHandler],
   });
 
-  /// catch 404
-  app.use((req, res) => {
-    return res.status(404).json({
-      status: false,
-      message: "not found",
-    });
-  });
-
-  // catch the validation errors
-  app.use((err, req, res, next) => {
-    if (!isCelebrateError(err)) {
-      return next(err);
+  app.use((req: Request, res: Response) => {
+    if (!res.writableEnded) {
+      res.status(404).json({
+        status: 404,
+        message: `Cannot ${req.method} ${req.url}`,
+      });
     }
-    const errorBody = err.details.get("body"); // 'details' is a Map()
-    const {
-      details: [errorDetails],
-    } = errorBody;
-
-    return res.status(400).json({
-      status: false,
-      message: errorDetails.message,
-    });
-  });
-
-  /// Unauthorized error
-  app.use((err, req, res, next) => {
-    if (err.name === "UnauthorizedError") {
-      return res
-        .status(err.status || 401)
-        .json({ status: false, message: err.message })
-        .end();
-    }
-    return next(err);
-  });
-
-  app.use((err, req, res, next) => {
-    return res.status(err.status || 500).json({
-      status: false,
-      message: err.message,
-    });
+    res.end();
   });
 };

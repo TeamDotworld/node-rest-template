@@ -8,37 +8,69 @@ datasource db {
 
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["selectRelationCount"]
+  previewFeatures = ["selectRelationCount", "filterJson"]
 }
 
-enum UserStatus {
+enum ReleaseType {
+  ALPHA
+  CANARY
+  BETA
+  STABLE
+  ARCHIVE
+}
+
+enum DeviceType {
+  WINDOWS
+  MAC
+  LINUX
+  ANDROID
+  IOS
+  EMBEDDED
+  UNKNOWN
+}
+
+enum Status {
   ONLINE
   OFFLINE
-  LIVE
+  PROVISIONING
+}
+
+enum State {
+  ACTIVE
+  INACTIVE
+}
+
+enum Orientation {
+  PORTRAIT
+  LANDSCAPE
+  AUTO
 }
 
 model User {
-  id                  String     @id @default(uuid())
-  email               String     @unique
+  id                  String        @id @default(uuid())
+  email               String        @unique
   first_name          String
   middle_name         String?
   last_name           String?
-  username            String     @unique
   password            String
-  about               String     @default("")
-  email_verified      Boolean    @default(false)
-  blocked             Boolean    @default(false)
+  about               String        @default("")
+  email_verified      Boolean       @default(false)
+  blocked             Boolean       @default(false)
   last_ip             String?
-  last_login          DateTime   @default(now())
+  last_login          DateTime      @default(now())
   last_password_reset DateTime?
-  phone_number        Int?
-  phone_verified      Boolean    @default(false)
-  avatar              String     @default("https://www.gravatar.com/avatar/00000000000000000000000000000000")
-  status              UserStatus @default(OFFLINE)
+  user_state          String?
+  screen_state        String?
   roles               Role[]
+  mobile              String?
+  is_admin            Boolean       @default(false)
+  mobile_verified     Boolean       @default(false)
+  country_code        Int           @default(0)
+  avatar              String        @default("https://www.gravatar.com/avatar/00000000000000000000000000000000")
   fcm_tokens          String[]
-  created_at          DateTime   @default(now())
-  updated_at          DateTime   @updatedAt
+  device_groups       DeviceGroup[]
+  created_at          DateTime      @default(now())
+  updated_at          DateTime      @updatedAt
 }
 
 model Role {
@@ -55,4 +87,97 @@ model Permission {
   description String
   route       String
   roles       Role[]
+}
+
+model Device {
+  id               String        @id @default(uuid())
+  name             String
+  alias_name       String?
+  token            String        @default(uuid())
+  can_call         Boolean       @default(true)
+  can_screen_share Boolean       @default(false)
+  type             DeviceType    @default(ANDROID)
+  sub_type         String?
+  fcm_token        String
+  description      String
+  state            State         @default(ACTIVE)
+  status           Status        @default(PROVISIONING)
+  software         Software      @relation(fields: [software_id], references: [id])
+  software_id      String
+  telemetry        Telemetry[]
+  groups           DeviceGroup[]
+  metadata         Json?
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
+}
+
+model DeviceGroup {
+  id        String   @id @default(uuid())
+  name      String
+  type      String?
+  devices   Device[]
+  users     User[]
+  policy    Policy   @relation(fields: [policy_id], references: [id])
+  policy_id String
+}
+
+model Software {
+  id             String      @id @default(uuid())
+  name           String
+  package        String
+  version_code   Int         @default(0)
+  version_name   String?
+  min_sdk        Float       @default(0)
+  os             DeviceType  @default(UNKNOWN)
+  path           String
+  type           String?
+  change_request String?
+  changelog      String
+  category       String?
+  release_type   ReleaseType @default(ALPHA)
+  devices        Device[]
+  archived       Boolean     @default(false)
+  archived_on    DateTime?
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
+
+  @@unique([package, version_code])
+}
+
+model Telemetry {
+  id          String   @id @default(uuid())
+  device      Device   @relation(fields: [device_id], references: [id])
+  device_id   String
+  mqtt_status Status   @default(OFFLINE)
+  screen_on   Boolean  @default(false)
+  current_app String
+  latitude    Float    @default(11.0365005)
+  longitude   Float    @default(77.0162107)
+  call_logs   Json?
+  sms_logs    Json?
+  cpu         Json?
+  memory      Json?
+  apps        Json?
+  camera      Json?
+  battery     Json?
+  wifi        Json?
+  storage     Json?
+  bluetooth   Json?
+  metadata    Json?
+  created_at  DateTime @default(now())
+}
+
+model Policy {
+  id                 String        @id @default(uuid())
+  screen_orientation Orientation   @default(AUTO)
+  screen_timeout     Int           @default(0)
+  screen_brightness  Int           @default(50)
+  volume             Int           @default(100)
+  adb                Boolean       @default(false)
+  adb_timeout        Int           @default(5000)
+  alert_mails        String[]
+  kiosk_mode         Boolean       @default(false)
+  kiosk_app          String
+  geofence           Json?
+  device_groups      DeviceGroup[]
 }

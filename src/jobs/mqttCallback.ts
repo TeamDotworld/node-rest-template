@@ -1,4 +1,4 @@
-import { DeviceStatus, PrismaClient } from ".prisma/client";
+import { Status, PrismaClient } from ".prisma/client";
 import { Packet } from "mqtt-packet";
 import { Container } from "typedi";
 import Logger from "../loaders/logger";
@@ -9,7 +9,7 @@ enum Topic {
 
 export interface WillMessage {
   device_id: string;
-  status: DeviceStatus;
+  status: Status;
 }
 
 function onMessage(topic: string, payload: Buffer, packet: Packet) {

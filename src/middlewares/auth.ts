@@ -8,8 +8,8 @@ import { StrategyOptions } from "passport-jwt";
 
 import { Logger } from "winston";
 import { Container } from "typedi";
-import { UnauthorizedError } from "../../services/auth";
-import config from "../../config";
+import config from "../config";
+import { HttpError } from "routing-controllers";
 
 var opts: StrategyOptions = {
   secretOrKey: config.keys.public.replace(/\\n/gm, "\n"),
@@ -34,9 +34,7 @@ export function auth(passport: PassportStatic) {
               },
             ],
           },
-          include: {
-            devices: true,
-          },
+          include: {},
         });
         if (user) {
           delete user.blocked;
@@ -67,22 +65,26 @@ export const checkRole =
               id: user.id,
             },
             {
-              roles: {
-                some: {
-                  permissions: {
+              OR: [
+                {
+                  roles: {
                     some: {
-                      OR: [
-                        {
-                          name: needRole,
+                      permissions: {
+                        some: {
+                          OR: [
+                            {
+                              name: needRole,
+                            },
+                          ],
                         },
-                        {
-                          name: "*",
-                        },
-                      ],
+                      },
                     },
                   },
                 },
-              },
+                {
+                  is_admin: true,
+                },
+              ],
             },
           ],
         },
@@ -90,10 +92,7 @@ export const checkRole =
       if (existing) {
         next();
       } else {
-        throw new UnauthorizedError(
-          "You don't have access to this resource",
-          403
-        );
+        throw new HttpError(403, "You don't have access to this resource");
       }
     } catch (e) {
       logger.error("🔥 User don't have role for this operation");
