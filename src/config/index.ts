@@ -9,7 +9,6 @@ if (envFound.error) {
 
 process.env.NODE_ENV = process.env.NODE_ENV || "development";
 process.env.PORT = process.env.PORT || "8000";
-
 export default {
   host: process.env.HOST || "127.0.0.1",
   port: parseInt(process.env.PORT) || 8000,
@@ -17,8 +16,8 @@ export default {
     level: process.env.LOG_LEVEL || "silly",
   },
   keys: {
-    public: process.env.PUBLIC_KEY,
-    private: process.env.PRIVATE_KEY,
+    public: process.env.PUBLIC_KEY || "",
+    private: process.env.PRIVATE_KEY || "",
   },
   role: {
     super_admin: process.env.SUPER_ADMIN || "super_admin",
@@ -31,17 +30,18 @@ export default {
       device: "/api/v1/devices",
     },
   },
+  sendgrid: process.env.SENDGRID_API_KEY,
   twilio: {
-    account_sid: process.env.TWILIO_ACCOUNT_SID,
-    api_key: process.env.TWILIO_API_KEY,
-    api_secret: process.env.TWILIO_API_SECRET,
-    auth_token: process.env.TWILIO_AUTH_TOKEN,
+    account_sid: process.env.TWILIO_ACCOUNT_SID || "",
+    api_key: process.env.TWILIO_API_KEY || "",
+    api_secret: process.env.TWILIO_API_SECRET || "",
+    auth_token: process.env.TWILIO_AUTH_TOKEN || "",
   },
-  cloudinary: process.env.CLOUDINARY_URL,
+  cloudinary: process.env.CLOUDINARY_URL || "",
   mqtt: {
     host: process.env.MQTT_HOST,
-    username: process.env.MQTT_USERNAME,
-    password: process.env.MQTT_PASSWORD,
+    username: process.env.MQTT_USERNAME || "",
+    password: process.env.MQTT_PASSWORD || "",
     subscription: process.env.MQTT_SUBSCRIPTION || "",
     reconnect: parseInt(process.env.MQTT_RECONNECT) || 10 * 1000,
   },

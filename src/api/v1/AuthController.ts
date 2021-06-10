@@ -11,19 +11,21 @@ import {
   HttpError,
   JsonController,
   UnauthorizedError,
+  Patch,
+  BodyParam,
 } from "routing-controllers";
 import AuthService from "../../services/auth";
-import { User } from "../../interface/inputs/auth";
+import { LoginDTO, ResetDTO } from "../../interface/inputs/auth";
 
 @JsonController("/v1")
 export class AuthController {
   @Post("/authenticate")
-  async signin(@Body({ required: true }) creds: User) {
+  async login(@Body({ required: true }) creds: LoginDTO) {
     const logger: Logger = Container.get("logger");
-    logger.debug(`Calling Sign-In endpoint with %o`, creds);
+    logger.debug(`Calling login endpoint with %o`, creds);
     try {
       const authServiceInstance: AuthService = Container.get(AuthService);
-      const { user, token } = await authServiceInstance.SignIn(
+      const { user, token } = await authServiceInstance.Login(
         creds.email,
         creds.password
       );
@@ -41,8 +43,40 @@ export class AuthController {
     }
   }
 
-  @Put("/reset")
-  put(@Param("id") id: number, @Body() user: any) {
-    return "Updating a user...";
+  @Patch("/reset")
+  async resetPassword(@Body({ required: true }) body: ResetDTO) {
+    const logger: Logger = Container.get("logger");
+    logger.debug(`Calling reset endpoint with %o`, body.email);
+
+    try {
+      const authServiceInstance: AuthService = Container.get(AuthService);
+      const user = await authServiceInstance.ResetPassword(body.email);
+
+      return {
+        status: true,
+        data: {
+          ...user,
+        },
+      };
+    } catch (e) {
+      logger.error("🔥 error: %o", e);
+      throw e;
+    }
+  }
+
+  @Get("/pk")
+  async getPublicKey() {
+    const logger: Logger = Container.get("logger");
+    try {
+      const authServiceInstance = Container.get(AuthService);
+      const pk = await authServiceInstance.GetPk();
+      return {
+        status: true,
+        data: pk,
+      };
+    } catch (e) {
+      logger.error("🔥 error: %o", e);
+      throw e;
+    }
   }
 }

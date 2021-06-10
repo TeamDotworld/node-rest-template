@@ -40,13 +40,15 @@ export default ({ app }: { app: Express }) => {
     })
   );
 
+  app.use(middleware.rateLimiter);
+
   app.use(passport.initialize());
   middleware.auth(passport);
 
   // Load API routes
   useExpressServer(app, {
     routePrefix: "/api",
-    defaultErrorHandler: true,
+    defaultErrorHandler: false,
     controllers: [...v1controllers],
     middlewares: [LoggingMiddleware, CustomErrorHandler],
   });
@@ -54,7 +56,7 @@ export default ({ app }: { app: Express }) => {
   app.use((req: Request, res: Response) => {
     if (!res.writableEnded) {
       res.status(404).json({
-        status: 404,
+        status: false,
         message: `Cannot ${req.method} ${req.url}`,
       });
     }

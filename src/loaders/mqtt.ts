@@ -32,8 +32,7 @@ export class MqttHandler {
 
     // Mqtt error calback
     this.mqttClient.on("error", (err) => {
-      Logger.error(err);
-      this.mqttClient.end();
+      Logger.error(`😫 Error in MQTT connection.${err.message}`);
     });
 
     // Connection callback

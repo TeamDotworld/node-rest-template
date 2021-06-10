@@ -12,6 +12,7 @@ let eventDispatcher = new EventDispatcher();
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { UnauthorizedError } from "routing-controllers";
+import { UserNotFoundError } from "../api/errors/UserNotFoundError";
 
 const prisma = new PrismaClient();
 
@@ -19,7 +20,7 @@ const prisma = new PrismaClient();
 export default class AuthService {
   constructor(@Inject("logger") private logger: Logger) {}
 
-  public async SignIn(
+  public async Login(
     email: string,
     password: string,
     ip: string | string[] = "unknown"
@@ -69,6 +70,16 @@ export default class AuthService {
     let tmpPass = Math.random().toString(36).substring(2, 7);
 
     this.logger.warn("Password is %s", tmpPass);
+
+    let isExist = await prisma.user.findUnique({
+      where: {
+        email,
+      },
+    });
+
+    if (!isExist) {
+      throw new UserNotFoundError();
+    }
 
     const salt = await bcrypt.genSalt(config.seed);
     let password: string = await bcrypt.hash(tmpPass, salt);
