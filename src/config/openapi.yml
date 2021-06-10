@@ -1,0 +1,54 @@
+openapi: 3.0.3
+info:
+  title: Beambox OpenAPI docs
+  description: Backend API for Beambox OpenAPI
+  termsOfService: http://swagger.io/terms/
+  contact:
+    email: naveen@dotworld.in
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  version: 1.0.0
+servers:
+  - url: /api/v1
+
+tags:
+  - name: auth
+    description: Authentication endpoints
+  - name: roles
+    description: Greeting APIs
+  - name: permissions
+    description: Greeting APIs
+
+paths:
+  /auth/signin:
+    post:
+      description: Sign in to application using this end point
+      tags:
+        - auth
+      operationId: auth
+      parameters:
+        - name: name
+          required: false
+          in: query
+          description: The name of a caller
+          schema:
+            type: string
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HelloResponse"
+
+components:
+  schemas:
+    HelloResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - message
+      properties:
+        message:
+          type: string

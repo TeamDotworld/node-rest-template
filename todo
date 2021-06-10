@@ -1,0 +1,25 @@
+https://github.com/taskforcesh/bullmq
+https://softwareontheroad.com/ideal-nodejs-project-structure/#architecture
+
+
+
+Permissions :
+-------------
+
+super_admin
+
+device.create
+device.list
+device.update
+device.delete
+device.assign
+
+role.create
+role.list
+role.update
+role.delete
+
+user.create
+user.list
+user.update
+user.delete
