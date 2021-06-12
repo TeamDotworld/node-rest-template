@@ -5,11 +5,12 @@ import { Container } from "typedi";
 
 import config from "../../../config";
 import DeviceService from "../../../services/devices";
+import { HttpError } from "../../errors";
 
 const route = Router();
 
 export default (app: Router) => {
-  app.use("/", route);
+  app.use("/misc/devices", route);
 
   route.post(
     "/",
@@ -58,7 +59,10 @@ export default (app: Router) => {
         const device = await deviceService.GetDevice(id);
 
         if (device.blocked) {
-          throw new Error("Device not approved. Contact your administrator.");
+          throw new HttpError(
+            403,
+            "Device not approved. Contact your administrator."
+          );
         }
 
         return res.json({

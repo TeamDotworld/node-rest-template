@@ -1,14 +1,7 @@
-import { UserController } from "./admin/UserController";
-import { RoleController } from "./admin/RoleController";
-import { PermissionController } from "./admin/PermissionController";
+import v1Admin from "./admin";
+import v1User from "./user";
+import v1Device from "./device";
 
-import { AuthController } from "./AuthController";
+let routes = [v1Admin, v1User, v1Device];
 
-let controllers = [
-  UserController,
-  AuthController,
-  RoleController,
-  PermissionController,
-];
-
-export default controllers;
+export default routes;

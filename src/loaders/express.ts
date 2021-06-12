@@ -1,20 +1,19 @@
 import express, { Express, Request, Response } from "express";
-import { useExpressServer } from "routing-controllers";
 
 import cors from "cors";
 import passport from "passport";
 
 import Logger from "./logger";
-import v1controllers from "../api/v1";
+import v1Routes from "../api/v1";
 import middleware from "../middlewares";
-import { LoggingMiddleware } from "../middlewares/LoggingMiddleware";
-import { CustomErrorHandler } from "../middlewares/ExpressErrorMiddlewareInterface";
 
 export default ({ app }: { app: Express }) => {
-  app.get("/status", (req, res) => {
+  app.use(middleware.loggingMiddleware);
+
+  app.get("/health_check", (_, res) => {
     res.status(200).end();
   });
-  app.head("/status", (req, res) => {
+  app.head("/health_check", (_, res) => {
     res.status(200).end();
   });
 
@@ -45,22 +44,27 @@ export default ({ app }: { app: Express }) => {
   app.use(passport.initialize());
   middleware.auth(passport);
 
-  // Load API routes
-  useExpressServer(app, {
-    routePrefix: "/api",
-    defaultErrorHandler: false,
-    controllers: [...v1controllers],
-    middlewares: [LoggingMiddleware, CustomErrorHandler],
+  // version 1 routes
+  v1Routes.forEach((route) => {
+    app.use("/api/v1", route());
   });
 
-  app.use((req: Request, res: Response) => {
-    if (!res.writableEnded) {
-      res.status(404).json({
-        status: false,
-        message: `Cannot ${req.method} ${req.url}`,
-      });
-    }
-    res.end();
+  /// catch 404
+  app.use((req, res) => {
+    return res.status(404).json({
+      status: false,
+      message: `${req.method} at ${req.path} not found`,
+    });
   });
+
+  app.use(middleware.errorMiddleware);
+
+  app.use((error: any, _req: Request, res: Response, _next: any) => {
+    return res.json({
+      status: false,
+      message: error.message || "internal server erro",
+    });
+  });
+
   Logger.info("🕸 Booting up express...");
 };

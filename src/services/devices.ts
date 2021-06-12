@@ -1,35 +1,32 @@
 import { Inject, Service } from "typedi";
 import { Logger } from "winston";
 import { Device, PrismaClient } from "@prisma/client";
-import { EventDispatcher } from "event-dispatch";
 
-import config from "../config";
-import events from "../subscribers/events";
 import { IDevice } from "../interface/Device";
-
-let eventDispatcher = new EventDispatcher();
-
-const prisma = new PrismaClient();
+import { NotFoundError } from "../api/errors";
 
 @Service()
 export default class DeviceService {
-  constructor(@Inject("logger") private logger: Logger) {}
+  constructor(
+    @Inject("logger") private logger: Logger,
+    @Inject("prisma") private prisma: PrismaClient
+  ) {}
 
   public async ListDevices(): Promise<Device[]> {
     this.logger.silly("💻 Listing devices");
-    let devices = await prisma.device.findMany();
+    let devices = await this.prisma.device.findMany();
     return devices;
   }
 
   public async GetDevice(id: string): Promise<Device> {
     this.logger.silly("💻 Finding device with id " + id);
-    let device = await prisma.device.findUnique({
+    let device = await this.prisma.device.findUnique({
       where: {
         id,
       },
     });
     if (!device) {
-      throw new Error("Device not found");
+      throw new NotFoundError("Device not found");
     }
     return device;
   }
@@ -37,7 +34,7 @@ export default class DeviceService {
   public async CreateDevice(device: IDevice): Promise<Device> {
     this.logger.silly("💻 Creating new device");
 
-    let newDevice = await prisma.device.upsert({
+    let newDevice = await this.prisma.device.upsert({
       where: {
         id: device.id,
       },
@@ -46,7 +43,6 @@ export default class DeviceService {
       },
       update: {
         name: device.name,
-        is_live_supported: device.is_live_supported,
       },
     });
 
@@ -58,14 +54,13 @@ export default class DeviceService {
     device: IDevice
   ): Promise<Device> {
     this.logger.silly("💻 Creating new device");
-    let updated = await prisma.device.update({
+    let updated = await this.prisma.device.update({
       where: {
         id: device_id,
       },
       data: {
         blocked: device.blocked,
         name: device.name,
-        is_live_supported: device.is_live_supported,
       },
     });
     return updated;
@@ -73,7 +68,7 @@ export default class DeviceService {
 
   public async DeleteDevice(device_id: string): Promise<Device> {
     this.logger.silly("🔥 Deleting new device");
-    let deleted = await prisma.device.delete({
+    let deleted = await this.prisma.device.delete({
       where: {
         id: device_id,
       },

@@ -5,6 +5,11 @@ export interface IUser {
   password?: string;
 }
 
+export interface TokenPayload {
+  id: string;
+  email: string;
+}
+
 export interface IUserLoginDTO {
   email: string;
   password: string;
@@ -16,12 +21,12 @@ export interface UserListDTO {
   first_name: string;
   middle_name: string | null;
   last_name: string | null;
-  username: string;
   about: string;
-  phone_number: number | null;
+  mobile: string | null;
+  country_code: number | null;
   created_at: Date;
   updated_at: Date;
-  avatar: string | null;
+  avatar: string;
 }
 
 export interface UserCreateInputDTO {
@@ -29,10 +34,9 @@ export interface UserCreateInputDTO {
   first_name: string;
   middle_name?: string | null;
   last_name?: string | null;
-  username: string;
   password: string;
   about?: string;
-  phone_number?: number | null;
+  mobile?: string;
 }
 
 export interface UserFcmOutputDTO {
@@ -44,11 +48,10 @@ export interface UserUpdateDTO {
   first_name?: string;
   middle_name?: string | null;
   last_name?: string | null;
-  username?: string;
   password?: string;
   about?: string;
   blocked?: boolean;
-  phone_number?: number | null;
+  mobile?: string | null;
   roles: string[];
   devices?: string[];
 }

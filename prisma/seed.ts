@@ -11,6 +11,19 @@ const userData: Prisma.UserCreateInput[] = [
     last_ip: "127.0.0.1",
     password: "$2b$12$F1sPCsTGNYinni1gW5HE5OTSbj9fBxmR2PTNsBSoerfoHHZWfsoiC",
     email_verified: true,
+    roles: {
+      create: {
+        name: "Super Admin",
+        description: "Role has access to all resources",
+        permissions: {
+          create: {
+            name: "super.admin",
+            description: "Permission has access to all resources",
+            route: "*",
+          },
+        },
+      },
+    },
   },
 ];
 

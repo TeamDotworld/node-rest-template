@@ -3,11 +3,11 @@ import LoggerInstance from "./logger";
 import twilioClient from "./twilio";
 
 import mqttClient from "./mqtt";
-import prismaDb from "./prismaDb";
+import prisma from "./prisma";
 
 export default () => {
   try {
-    Container.set("prisma", prismaDb());
+    Container.set("prisma", prisma);
     Container.set("logger", LoggerInstance);
     Container.set("twilio", twilioClient);
     Container.set("mqtt", mqttClient);

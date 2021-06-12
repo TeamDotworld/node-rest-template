@@ -1,7 +1,7 @@
 import winston from "winston";
 import config from "../config";
 
-const options = {
+/* const options = {
   servers: [
     { host: process.env.GRAYLOG_SERVER, port: process.env.GRAYLOG_PORT },
   ],
@@ -14,7 +14,7 @@ const options = {
   maxsize: 5242880, // 5MB
   maxFiles: 5,
   staticMeta: { environment: `${process.env.NODE_ENV}` },
-};
+}; */
 
 const transports = [];
 if (process.env.NODE_ENV !== "production") {

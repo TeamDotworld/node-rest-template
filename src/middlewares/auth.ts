@@ -1,18 +1,18 @@
 const JwtStrategy = require("passport-jwt").Strategy;
 const ExtractJwt = require("passport-jwt").ExtractJwt;
-import { Request, Response, NextFunction } from "express";
+import { NextFunction } from "express";
 
-import { PrismaClient, User } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { PassportStatic } from "passport";
 import { StrategyOptions } from "passport-jwt";
 
 import { Logger } from "winston";
 import { Container } from "typedi";
 import config from "../config";
-import { HttpError } from "routing-controllers";
+import { HttpError } from "../api/errors";
 
 var opts: StrategyOptions = {
-  secretOrKey: config.keys.public.replace(/\\n/gm, "\n"),
+  secretOrKey: config?.keys?.public?.replace(/\\n/gm, "\n"),
   jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
   algorithms: ["RS256"],
 };
@@ -51,7 +51,7 @@ export function auth(passport: PassportStatic) {
 }
 
 export const checkRole =
-  (needRole: string) => async (req, res: Response, next: NextFunction) => {
+  (needRole: string) => async (req, _, next: NextFunction) => {
     const logger: Logger = Container.get("logger");
     try {
       const { user } = req;
@@ -81,9 +81,6 @@ export const checkRole =
                     },
                   },
                 },
-                {
-                  is_admin: true,
-                },
               ],
             },
           ],
@@ -96,37 +93,31 @@ export const checkRole =
       }
     } catch (e) {
       logger.error("🔥 User don't have role for this operation");
-      return res.status(403).json({
-        message: e.message,
-      });
+      throw e;
     }
   };
 
-export const validateDevice =
-  () => async (req, res: Response, next: NextFunction) => {
-    const logger: Logger = Container.get("logger");
-    try {
-      let { id: device_id } = req.params;
-      let { device_token } = req.query;
+export const validateDevice = () => async (req, _, next: NextFunction) => {
+  const logger: Logger = Container.get("logger");
+  try {
+    let { id: device_id } = req.params;
+    let { device_token } = req.query;
 
-      let device = await prisma.device.findFirst({
-        where: {
-          id: device_id,
-          token: device_token,
-        },
-      });
+    let device = await prisma.device.findFirst({
+      where: {
+        id: device_id,
+        token: device_token,
+      },
+    });
 
-      if (!device) {
-        throw new Error("Unauthorized");
-      }
-      req.device = device;
-
-      next();
-    } catch (e) {
-      logger.error("🔥 This device is not allowed");
-      logger.error(e);
-      return res.status(403).json({
-        message: e.message,
-      });
+    if (!device) {
+      throw new HttpError(401, "Unauthorized");
     }
-  };
+    req.device = device;
+
+    next();
+  } catch (e) {
+    logger.error("🔥 This device is not allowed");
+    throw e;
+  }
+};

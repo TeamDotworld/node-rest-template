@@ -2,9 +2,12 @@ import { Twilio } from "twilio";
 import { RoomInstance } from "twilio/lib/rest/video/v1/room";
 import { Container } from "typedi";
 import multer from "multer";
+import jwt from "jsonwebtoken";
 
 import config from "../config";
 import AccessToken from "twilio/lib/jwt/AccessToken";
+import { User } from "@prisma/client";
+import { TokenPayload } from "../interface/User";
 
 const VideoGrant = AccessToken.VideoGrant;
 
@@ -59,10 +62,10 @@ const closeRoom = async (roomName: string): Promise<RoomInstance> => {
 };
 
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
+  destination: function (_req, _file, cb) {
     cb(null, "uploads/");
   },
-  filename: function (req, file, cb) {
+  filename: function (_req, file, cb) {
     console.log(file);
     cb(null, file.originalname);
   },
@@ -80,6 +83,21 @@ function formatBytes(bytes, decimals = 2) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
 }
 
+function generateLoginToken(user: User): string {
+  var privateKey = config.keys.private.replace(/\\n/gm, "\n");
+
+  var token = jwt.sign({ id: user.id, email: user.email }, privateKey, {
+    expiresIn: "3d",
+    algorithm: "RS256",
+  });
+  return token;
+}
+
+function verifyMagicLink(token): TokenPayload {
+  var decoded = jwt.verify(token, config.magic.key);
+  return decoded as TokenPayload;
+}
+
 export default {
   makeid,
   createRoom,
@@ -87,4 +105,6 @@ export default {
   closeRoom,
   storage,
   formatBytes,
+  generateLoginToken,
+  verifyMagicLink,
 };

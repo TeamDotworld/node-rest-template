@@ -8,6 +8,8 @@
     "forceConsistentCasingInFileNames": true,
     "target": "ES2020",
     "noImplicitAny": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "moduleResolution": "node",
     "sourceMap": true,
     "outDir": "dist",
@@ -16,8 +18,7 @@
     "removeComments": true,
     "baseUrl": "src",
     "lib": ["es2015"],
-    "typeRoots": ["node_modules/@types", "./src/types"],
-    "types": ["mocha", "node"],
+    "typeRoots": ["./src/types"],
     "paths": {
       "*": ["node_modules/*", "src/interface/*"]
     }

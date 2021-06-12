@@ -35,6 +35,31 @@ export class NotificationEventSubscriber {
     }
   }
 
+  @On(events.notification.magicLink)
+  async onMagicLinkRequest({ user, token }: { user: User; token: string }) {
+    try {
+      console.log("Sending magic link to " + user.email);
+      const msg = {
+        to: `${user.email}`, // Change to your recipient
+        from: "no-reply@dotworld.dev",
+        subject: "Magic Link request",
+        text: `Hi ${user.first_name} \nPlease use link ${config.magic.link}?token=${token} to login.`,
+        html: `Hi ${user.first_name} <br/>Please use link ${config.magic.link}?token=${token} to login.`,
+      };
+
+      sgMail
+        .send(msg)
+        .then((response) => {
+          console.log(response[0].statusCode);
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   @On(events.notification.newAccount)
   async onNewAccountCreated(user: User) {
     try {

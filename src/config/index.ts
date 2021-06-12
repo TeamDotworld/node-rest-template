@@ -1,5 +1,3 @@
-import { parse } from "dotenv";
-
 const dotenv = require("dotenv");
 
 const envFound = dotenv.config();
@@ -11,6 +9,7 @@ process.env.NODE_ENV = process.env.NODE_ENV || "development";
 process.env.PORT = process.env.PORT || "8000";
 export default {
   host: process.env.HOST || "127.0.0.1",
+  frontend: process.env.FRONTEND_URL || "",
   port: parseInt(process.env.PORT) || 8000,
   logs: {
     level: process.env.LOG_LEVEL || "silly",
@@ -19,17 +18,20 @@ export default {
     public: process.env.PUBLIC_KEY || "",
     private: process.env.PRIVATE_KEY || "",
   },
+  magic: {
+    key:
+      process.env.MAGIC_TOKEN_KEY ||
+      Math.random().toString(36).substring(2, 10),
+    expiry: process.env.MAGIC_TOKEN_EXPIRY || "5m",
+    retry: process.env.MAGIC_TOKEN_RETRY
+      ? parseInt(process.env.MAGIC_TOKEN_RETRY)
+      : 5 * 60,
+    link: process.env.MAGIC_TOKEN_LINK || "",
+  },
   role: {
     super_admin: process.env.SUPER_ADMIN || "super_admin",
   },
   seed: parseInt(process.env.SEED) || 12,
-  api: {
-    v1: {
-      user: "/api/v1",
-      admin: "/api/v1/admin",
-      device: "/api/v1/devices",
-    },
-  },
   sendgrid: process.env.SENDGRID_API_KEY,
   twilio: {
     account_sid: process.env.TWILIO_ACCOUNT_SID || "",

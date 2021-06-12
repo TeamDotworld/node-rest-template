@@ -77,11 +77,11 @@ model User {
   last_ip             String?
   last_login          DateTime        @default(now())
   last_password_reset DateTime?
+  magic_sent_time     DateTime?
   user_idle_state     UserIdleState   @default(IDLE)
   screen_idle_state   ScreenIdleState @default(LOCKED)
   roles               Role[]
   mobile              String?
-  is_admin            Boolean         @default(false)
   mobile_verified     Boolean         @default(false)
   country_code        Int             @default(0)
   avatar              String          @default("https://www.gravatar.com/avatar/00000000000000000000000000000000")

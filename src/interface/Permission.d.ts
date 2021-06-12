@@ -8,4 +8,5 @@ export interface PermissionDTO {
 export interface PermissionUpdateDTO {
   name?: string;
   description?: string;
+  route?: string;
 }

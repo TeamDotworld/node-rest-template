@@ -27,6 +27,7 @@
   },
   "plugins": ["@typescript-eslint", "import"],
   "rules": {
+    "no-unused-vars": "./src",
     "prettier/prettier": ["error"],
     "@typescript-eslint/no-explicit-any": 2,
     "@typescript-eslint/no-unused-vars": 2,

@@ -1,31 +1,33 @@
-import { Inject, Service } from "typedi";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import { Logger } from "winston";
+import { Inject, Service } from "typedi";
 import { PrismaClient } from "@prisma/client";
 import { EventDispatcher } from "event-dispatch";
+import { differenceInSeconds } from "date-fns";
 
 import config from "../config";
-import { IUser } from "../interface/User";
+import { IUser, TokenPayload } from "../interface/User";
 import events from "../subscribers/events";
 
 let eventDispatcher = new EventDispatcher();
 
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import { HttpError, UnauthorizedError } from "routing-controllers";
-import { UserNotFoundError } from "../api/errors/UserNotFoundError";
-
-const prisma = new PrismaClient();
+import { HttpError, NotFoundError, UnauthorizedError } from "../api/errors";
+import helpers from "../helpers";
 
 @Service()
 export default class AuthService {
-  constructor(@Inject("logger") private logger: Logger) {}
+  constructor(
+    @Inject("logger") private logger: Logger,
+    @Inject("prisma") private prisma: PrismaClient
+  ) {}
 
   public async Login(
     email: string,
     password: string,
     ip: string | string[] = "unknown"
   ): Promise<{ user: IUser; token: string }> {
-    let user = await prisma.user.findFirst({
+    let user = await this.prisma.user.findFirst({
       where: {
         AND: [
           {
@@ -42,23 +44,19 @@ export default class AuthService {
     }
     let same = await bcrypt.compare(password, user.password);
     if (same) {
-      var privateKey = config.keys.private.replace(/\\n/gm, "\n");
+      let token = helpers.generateLoginToken(user);
 
-      var token = jwt.sign({ id: user.id }, privateKey, {
-        expiresIn: "3d",
-        algorithm: "RS256",
+      eventDispatcher.dispatch(events.user.login, {
+        user: user,
+        ip,
       });
 
-      let userResp = {
-        id: user.id,
-        name: user.first_name,
-        email: user.email,
-      };
-
-      eventDispatcher.dispatch(events.user.login, { user: userResp, ip });
-
       return {
-        user: userResp,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: `${user.first_name} ${user.last_name}`.trim(),
+        },
         token: token,
       };
     } else {
@@ -67,24 +65,23 @@ export default class AuthService {
   }
 
   public async ResetPassword(email: string): Promise<IUser> {
-    let tmpPass = Math.random().toString(36).substring(2, 7);
-
-    this.logger.warn("Password is %s", tmpPass);
-
-    let isExist = await prisma.user.findUnique({
+    let isExist = await this.prisma.user.findUnique({
       where: {
-        email,
+        email: email,
       },
     });
 
     if (!isExist) {
-      throw new UserNotFoundError();
+      throw new NotFoundError("User not found");
     }
 
     const salt = await bcrypt.genSalt(config.seed);
+    let tmpPass = Math.random().toString(36).substring(2, 7);
     let password: string = await bcrypt.hash(tmpPass, salt);
 
-    let user = await prisma.user.update({
+    this.logger.warn("Password is %s", tmpPass);
+
+    let user = await this.prisma.user.update({
       where: {
         email: email,
       },
@@ -104,6 +101,95 @@ export default class AuthService {
       name: user.first_name,
       email: user.email,
     };
+  }
+
+  public async SendMagicLink(email: string): Promise<string> {
+    let user = await this.prisma.user.findFirst({
+      where: {
+        AND: [
+          {
+            email: email,
+          },
+          {
+            blocked: false,
+          },
+        ],
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedError("Invalid login credentials");
+    }
+
+    if (user.magic_sent_time) {
+      let diff = differenceInSeconds(new Date(), user.magic_sent_time);
+
+      console.log(config.magic.retry - diff);
+
+      if (config.magic.retry - diff > 0) {
+        throw new HttpError(
+          406,
+          `You have requested magic links frequently.Please try after ${
+            config.magic.retry - diff
+          } seconds`
+        );
+      }
+    }
+
+    var token = jwt.sign({ id: user.id, email: user.email }, config.magic.key, {
+      expiresIn: config.magic.expiry,
+    });
+
+    eventDispatcher.dispatch(events.notification.magicLink, {
+      user,
+      token,
+    });
+
+    await this.prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        magic_sent_time: new Date(),
+      },
+    });
+
+    return user.email;
+  }
+
+  public async verifyMagicToken(
+    token: string,
+    ip: string | string[] = "unknown"
+  ): Promise<{ user: IUser; token: string }> {
+    let payload: TokenPayload = helpers.verifyMagicLink(token);
+
+    let user = await this.prisma.user.findFirst({
+      where: {
+        email: payload.email,
+        id: payload.id,
+      },
+    });
+
+    try {
+      let newToken = helpers.generateLoginToken(user);
+      eventDispatcher.dispatch(events.user.login, {
+        user: user,
+        ip,
+      });
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          name: `${user.first_name} ${user.last_name}`.trim(),
+        },
+        token: newToken,
+      };
+    } catch (err) {
+      if (err.name === "TokenExpiredError")
+        throw new UnauthorizedError("Magic link expired");
+      else throw new HttpError(err.message);
+    }
   }
 
   public GetPk(): string {

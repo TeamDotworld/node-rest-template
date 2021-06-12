@@ -6,5 +6,6 @@ export default {
     forgetPassword: "onForgetPassword",
     newAccount: "onNewAccountCreated",
     subscription: "onNewSubsctiption",
+    magicLink: "onMagicLink",
   },
 };

@@ -12,7 +12,7 @@ export interface WillMessage {
   status: Status;
 }
 
-function onMessage(topic: string, payload: Buffer, packet: Packet) {
+function onMessage(topic: string, payload: Buffer, _: Packet) {
   Logger.info("🛸 Received : " + payload.toString());
 
   switch (topic) {
