@@ -101,7 +101,7 @@ export const validateDevice = () => async (req, _, next: NextFunction) => {
   const logger: Logger = Container.get("logger");
   try {
     let { id: device_id } = req.params;
-    let { device_token } = req.query;
+    let { device_token } = req.body;
 
     let device = await prisma.device.findFirst({
       where: {

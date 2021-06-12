@@ -1,21 +1,21 @@
-import { celebrate, Joi } from "celebrate";
+import { celebrate, Joi, Segments } from "celebrate";
 import { CallProvider, DeviceType } from "@prisma/client";
 
 const loginSchema = celebrate({
-  body: Joi.object({
+  [Segments.BODY]: Joi.object({
     email: Joi.string().email().required().trim(),
     password: Joi.string().required(),
   }),
 });
 
 const tokenExchangeSchema = celebrate({
-  body: Joi.object({
+  [Segments.BODY]: Joi.object({
     token: Joi.string().required().trim(),
   }),
 });
 
 const newDeviceSchema = celebrate({
-  body: Joi.object({
+  [Segments.BODY]: Joi.object({
     id: Joi.string().uuid().required(),
     name: Joi.string().required(),
     can_call: Joi.boolean().required(),
@@ -40,4 +40,22 @@ const newDeviceSchema = celebrate({
   }),
 });
 
-export { loginSchema, tokenExchangeSchema, newDeviceSchema };
+const uuidParam = celebrate({
+  [Segments.PARAMS]: {
+    id: Joi.string().uuid().required(),
+  },
+});
+
+const deviceTokenSchema = celebrate({
+  [Segments.BODY]: Joi.object({
+    device_token: Joi.string().uuid().required(),
+  }),
+});
+
+export default {
+  loginSchema,
+  tokenExchangeSchema,
+  newDeviceSchema,
+  uuidParam,
+  deviceTokenSchema,
+};

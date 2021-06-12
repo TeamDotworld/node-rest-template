@@ -43,6 +43,9 @@ export default (app: Router) => {
   // Get device config
   route.get(
     "/:id/config",
+    middlewares.validation.uuidParam,
+    middlewares.validation.deviceTokenSchema,
+    middlewares.validateDevice,
     async (req: Request, res: Response, next: NextFunction) => {
       const logger: Logger = Container.get("logger");
       try {
@@ -53,7 +56,7 @@ export default (app: Router) => {
         if (device.blocked) {
           throw new HttpError(
             403,
-            "Device not approved. Contact your administrator."
+            "Device not approved. Contact device owner."
           );
         }
 

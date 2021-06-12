@@ -64,6 +64,11 @@ enum ScreenIdleState {
   UNLOCKED
 }
 
+enum CallPriority {
+  SECURITY_PHONE
+  COMMAND_CENTER
+}
+
 model User {
   id                  String          @id @default(uuid())
   email               String          @unique
@@ -87,8 +92,18 @@ model User {
   avatar              String          @default("https://www.gravatar.com/avatar/00000000000000000000000000000000")
   fcm_tokens          String[]
   device_groups       DeviceGroup[]
+  condo               Condo?          @relation(fields: [condo_id], references: [id])
+  condo_id            String?
   created_at          DateTime        @default(now())
   updated_at          DateTime        @updatedAt
+}
+
+model Condo {
+  id           String        @id @default(uuid())
+  name         String
+  description  String?
+  users        User[]
+  device_group DeviceGroup[]
 }
 
 model Role {
@@ -116,6 +131,7 @@ model Device {
   can_call           Boolean       @default(false)
   can_screen_share   Boolean       @default(false)
   supported_modes    CallType[]
+  call_priority      CallPriority  @default(SECURITY_PHONE)
   call_provider      CallProvider  @default(TWILIO)
   device_type        DeviceType    @default(ANDROID)
   sub_type           String?
@@ -135,13 +151,16 @@ model Device {
 }
 
 model DeviceGroup {
-  id        String   @id @default(uuid())
-  name      String
-  type      String?
-  devices   Device[]
-  users     User[]
-  policy    Policy   @relation(fields: [policy_id], references: [id])
-  policy_id String
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  custom_type String?
+  devices     Device[]
+  condo       Condo?   @relation(fields: [condo_id], references: [id])
+  condo_id    String?
+  users       User[]
+  policy      Policy?  @relation(fields: [policy_id], references: [id])
+  policy_id   String?
 }
 
 model Sip {
