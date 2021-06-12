@@ -161,16 +161,15 @@ export default class AuthService {
     token: string,
     ip: string | string[] = "unknown"
   ): Promise<{ user: IUser; token: string }> {
-    let payload: TokenPayload = helpers.verifyMagicLink(token);
-
-    let user = await this.prisma.user.findFirst({
-      where: {
-        email: payload.email,
-        id: payload.id,
-      },
-    });
-
     try {
+      let payload: TokenPayload = helpers.verifyMagicLink(token);
+      let user = await this.prisma.user.findFirst({
+        where: {
+          email: payload.email,
+          id: payload.id,
+        },
+      });
+
       let newToken = helpers.generateLoginToken(user);
       eventDispatcher.dispatch(events.user.login, {
         user: user,
@@ -186,9 +185,12 @@ export default class AuthService {
         token: newToken,
       };
     } catch (err) {
+      console.log(err.name);
       if (err.name === "TokenExpiredError")
-        throw new UnauthorizedError("Magic link expired");
-      else throw new HttpError(err.message);
+        throw new HttpError(400, "Magic link expired");
+      else if (err.name === "JsonWebTokenError")
+        throw new HttpError(400, "Invalid magic link");
+      else throw new HttpError(500, err.message);
     }
   }
 
