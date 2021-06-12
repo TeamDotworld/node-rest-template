@@ -1,6 +1,6 @@
 import { Inject, Service } from "typedi";
 import { Logger } from "winston";
-import { Device, PrismaClient } from "@prisma/client";
+import { Device, PrismaClient, Prisma } from "@prisma/client";
 
 import { IDevice } from "../interface/Device";
 import { NotFoundError } from "../api/errors";
@@ -31,7 +31,7 @@ export default class DeviceService {
     return device;
   }
 
-  public async CreateDevice(device: IDevice): Promise<Device> {
+  public async CreateDevice(device: Prisma.DeviceCreateInput): Promise<Device> {
     this.logger.silly("💻 Creating new device");
 
     let newDevice = await this.prisma.device.upsert({

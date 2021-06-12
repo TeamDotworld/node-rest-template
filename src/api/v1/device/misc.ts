@@ -1,35 +1,27 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { celebrate, Joi } from "celebrate";
 import { Logger } from "winston";
 import { Container } from "typedi";
 
 import config from "../../../config";
 import DeviceService from "../../../services/devices";
 import { HttpError } from "../../errors";
+import middlewares from "../../../middlewares";
 
 const route = Router();
 
 export default (app: Router) => {
-  app.use("/misc/devices", route);
+  app.use("/setup/devices", route);
 
   route.post(
     "/",
-    celebrate({
-      body: Joi.object({
-        id: Joi.string().required(),
-        name: Joi.string().required(),
-        is_live_supported: Joi.boolean().required(),
-      }),
-    }),
+    middlewares.validation.newDeviceSchema,
     async (req: Request, res: Response, next: NextFunction) => {
       const logger: Logger = Container.get("logger");
       try {
-        let { id, name, is_live_supported } = req.body;
+        let data = req.body;
         const deviceService = Container.get(DeviceService);
         const device = await deviceService.CreateDevice({
-          id,
-          name,
-          is_live_supported,
+          ...data,
           blocked: true,
         });
 

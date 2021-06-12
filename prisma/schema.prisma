@@ -113,7 +113,7 @@ model Device {
   alias_name         String?
   blocked            Boolean       @default(true)
   token              String        @default(uuid())
-  can_call           Boolean       @default(true)
+  can_call           Boolean       @default(false)
   can_screen_share   Boolean       @default(false)
   supported_modes    CallType[]
   call_provider      CallProvider  @default(TWILIO)
