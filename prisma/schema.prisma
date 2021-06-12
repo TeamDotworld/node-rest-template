@@ -92,13 +92,13 @@ model User {
   avatar              String          @default("https://www.gravatar.com/avatar/00000000000000000000000000000000")
   fcm_tokens          String[]
   device_groups       DeviceGroup[]
-  condo               Condo?          @relation(fields: [condo_id], references: [id])
-  condo_id            String?
+  location            Location?       @relation(fields: [location_id], references: [id])
+  location_id         String?
   created_at          DateTime        @default(now())
   updated_at          DateTime        @updatedAt
 }
 
-model Condo {
+model Location {
   id           String        @id @default(uuid())
   name         String
   description  String?
@@ -151,15 +151,15 @@ model Device {
 }
 
 model DeviceGroup {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
   description String
   custom_type String?
   devices     Device[]
-  condo       Condo?   @relation(fields: [condo_id], references: [id])
-  condo_id    String?
+  location    Location? @relation(fields: [location_id], references: [id])
+  location_id String?
   users       User[]
-  policy      Policy?  @relation(fields: [policy_id], references: [id])
+  policy      Policy?   @relation(fields: [policy_id], references: [id])
   policy_id   String?
 }
 
