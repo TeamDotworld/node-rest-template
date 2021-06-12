@@ -44,4 +44,6 @@ export default class UserService {
 
     return users;
   }
+
+  public async GetUser(id: string): Promise<User> {}
 }

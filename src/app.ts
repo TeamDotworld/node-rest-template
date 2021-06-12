@@ -4,9 +4,9 @@ import express from "express";
 import config from "./config";
 import Logger from "./loaders/logger";
 
-(async () => {
-  let app = express();
+let app = express();
 
+(async () => {
   await require("./loaders").default(app);
 
   app
@@ -27,3 +27,5 @@ import Logger from "./loaders/logger";
     );
   });
 })();
+
+export default app;

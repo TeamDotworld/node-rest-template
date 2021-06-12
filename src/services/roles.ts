@@ -1,13 +1,9 @@
 import { Inject, Service } from "typedi";
 import { Logger } from "winston";
 import { PrismaClient, Role } from "@prisma/client";
-import { EventDispatcher } from "event-dispatch";
 
-import config from "../config";
-import events from "../subscribers/events";
 import { RoleCreateInput } from "../interface/Role";
-
-let eventDispatcher = new EventDispatcher();
+import { HttpError } from "routing-controllers";
 
 const prisma = new PrismaClient();
 
@@ -16,7 +12,7 @@ export default class RoleService {
   constructor(@Inject("logger") private logger: Logger) {}
 
   public async CreateRole(data: RoleCreateInput): Promise<Role> {
-    this.logger.silly("🤵🤵 Create permissions");
+    this.logger.silly("🤵🤵 Create roles");
     if (data.permissions.length == 0) {
       throw new Error("need at least one permission to create a role");
     }
@@ -30,7 +26,10 @@ export default class RoleService {
     });
 
     if (data.permissions.length !== perms.length) {
-      throw new Error("Invalid permission id's detected. Not saving changes");
+      throw new HttpError(
+        400,
+        "Invalid permission id's detected. Not saving changes"
+      );
     }
 
     let permissions = data.permissions.map((i) => ({
@@ -54,13 +53,13 @@ export default class RoleService {
   }
 
   public async ListRoles(): Promise<Role[]> {
-    this.logger.silly("🤵🤵 Listing permissions");
+    this.logger.silly("🤵🤵 Listing roles");
     let roles = await prisma.role.findMany();
     return roles;
   }
 
-  public async GetRole(id: string): Promise<Role | null> {
-    this.logger.silly("🤵 Quering permission with id " + id);
+  public async GetRole(id: string): Promise<Role> {
+    this.logger.silly("🤵 Quering role with id " + id);
     let role = await prisma.role.findFirst({
       where: {
         id,
@@ -69,12 +68,12 @@ export default class RoleService {
         permissions: true,
       },
     });
-    if (!role) throw new Error("Unable to find role");
+    if (!role) throw new HttpError(400, "Role not found for given id");
     return role;
   }
 
   public async UpdateRole(id: string, data: RoleCreateInput): Promise<Role> {
-    this.logger.silly("🤵🤵 update roles");
+    this.logger.silly("🤵🤵 Update roles");
     if (data.permissions.length == 0) {
       throw new Error("need at least one permission to create a role");
     }
@@ -130,5 +129,15 @@ export default class RoleService {
     });
 
     return updated;
+  }
+
+  public async DeleteRole(id: string): Promise<Role> {
+    this.logger.silly("🤵🤵 Delete a role");
+    let deleted = await prisma.role.delete({
+      where: {
+        id,
+      },
+    });
+    return deleted;
   }
 }

@@ -7,9 +7,9 @@ import prismaDb from "./prismaDb";
 
 export default () => {
   try {
+    Container.set("prisma", prismaDb());
     Container.set("logger", LoggerInstance);
     Container.set("twilio", twilioClient);
-    Container.set("prisma", prismaDb());
     Container.set("mqtt", mqttClient);
     LoggerInstance.info("✌️ Dependency injected into container");
   } catch (e) {

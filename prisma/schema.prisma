@@ -35,42 +35,60 @@ enum Status {
   PROVISIONING
 }
 
-enum State {
-  ACTIVE
-  INACTIVE
-}
-
 enum Orientation {
   PORTRAIT
   LANDSCAPE
   AUTO
 }
 
+enum CallType {
+  ONE_WAY_AUDIO
+  TWO_WAY_AUDIO
+  ONE_WAY_VIDEO
+  TWO_WAY_VIDEO
+  SCREEN_SHARE
+}
+
+enum CallProvider {
+  TWILIO
+  AGORA
+}
+
+enum UserIdleState {
+  ACTIVE
+  IDLE
+}
+
+enum ScreenIdleState {
+  LOCKED
+  UNLOCKED
+}
+
 model User {
-  id                  String        @id @default(uuid())
-  email               String        @unique
+  id                  String          @id @default(uuid())
+  email               String          @unique
   first_name          String
   middle_name         String?
   last_name           String?
   password            String
-  about               String        @default("")
-  email_verified      Boolean       @default(false)
-  blocked             Boolean       @default(false)
+  about               String          @default("")
+  email_verified      Boolean         @default(false)
+  blocked             Boolean         @default(false)
   last_ip             String?
-  last_login          DateTime      @default(now())
+  last_login          DateTime        @default(now())
   last_password_reset DateTime?
-  user_state          String?
-  screen_state        String?
+  user_idle_state     UserIdleState   @default(IDLE)
+  screen_idle_state   ScreenIdleState @default(LOCKED)
   roles               Role[]
   mobile              String?
-  is_admin            Boolean       @default(false)
-  mobile_verified     Boolean       @default(false)
-  country_code        Int           @default(0)
-  avatar              String        @default("https://www.gravatar.com/avatar/00000000000000000000000000000000")
+  is_admin            Boolean         @default(false)
+  mobile_verified     Boolean         @default(false)
+  country_code        Int             @default(0)
+  avatar              String          @default("https://www.gravatar.com/avatar/00000000000000000000000000000000")
   fcm_tokens          String[]
   device_groups       DeviceGroup[]
-  created_at          DateTime      @default(now())
-  updated_at          DateTime      @updatedAt
+  created_at          DateTime        @default(now())
+  updated_at          DateTime        @updatedAt
 }
 
 model Role {
@@ -90,25 +108,30 @@ model Permission {
 }
 
 model Device {
-  id               String        @id @default(uuid())
-  name             String
-  alias_name       String?
-  token            String        @default(uuid())
-  can_call         Boolean       @default(true)
-  can_screen_share Boolean       @default(false)
-  type             DeviceType    @default(ANDROID)
-  sub_type         String?
-  fcm_token        String
-  description      String
-  state            State         @default(ACTIVE)
-  status           Status        @default(PROVISIONING)
-  software         Software      @relation(fields: [software_id], references: [id])
-  software_id      String
-  telemetry        Telemetry[]
-  groups           DeviceGroup[]
-  metadata         Json?
-  created_at       DateTime      @default(now())
-  updated_at       DateTime      @updatedAt
+  id                 String        @id @default(uuid())
+  name               String
+  alias_name         String?
+  blocked            Boolean       @default(true)
+  token              String        @default(uuid())
+  can_call           Boolean       @default(true)
+  can_screen_share   Boolean       @default(false)
+  supported_modes    CallType[]
+  call_provider      CallProvider  @default(TWILIO)
+  device_type        DeviceType    @default(ANDROID)
+  sub_type           String?
+  fcm_token          String?
+  description        String?
+  status             Status        @default(PROVISIONING)
+  software           Software?     @relation(fields: [software_id], references: [id])
+  software_id        String?
+  can_give_telemetry Boolean       @default(false)
+  telemetry          Telemetry[]
+  groups             DeviceGroup[]
+  metadata           Json?
+  sip_supported      Boolean       @default(false)
+  sip                Sip?
+  created_at         DateTime      @default(now())
+  updated_at         DateTime      @updatedAt
 }
 
 model DeviceGroup {
@@ -119,6 +142,21 @@ model DeviceGroup {
   users     User[]
   policy    Policy   @relation(fields: [policy_id], references: [id])
   policy_id String
+}
+
+model Sip {
+  id           String  @id @default(uuid())
+  name         String
+  domain       String
+  username     String
+  password     String
+  short_code   Int
+  redirect     Boolean @default(false)
+  redirect_sip String?
+  device       Device? @relation(fields: [device_id], references: [id])
+  device_id    String?
+
+  @@unique([id, device_id])
 }
 
 model Software {
@@ -148,9 +186,8 @@ model Telemetry {
   id          String   @id @default(uuid())
   device      Device   @relation(fields: [device_id], references: [id])
   device_id   String
-  mqtt_status Status   @default(OFFLINE)
   screen_on   Boolean  @default(false)
-  current_app String
+  current_app String?
   latitude    Float    @default(11.0365005)
   longitude   Float    @default(77.0162107)
   call_logs   Json?
@@ -180,4 +217,6 @@ model Policy {
   kiosk_app          String
   geofence           Json?
   device_groups      DeviceGroup[]
+  created_at         DateTime      @default(now())
+  updated_at         DateTime      @updatedAt
 }
