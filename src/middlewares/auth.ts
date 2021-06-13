@@ -34,7 +34,6 @@ export function auth(passport: PassportStatic) {
               },
             ],
           },
-          include: {},
         });
         if (user) {
           delete user.blocked;

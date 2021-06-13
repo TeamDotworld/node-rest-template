@@ -70,30 +70,41 @@ enum CallPriority {
 }
 
 model User {
-  id                  String          @id @default(uuid())
-  email               String          @unique
+  id                  String           @id @default(uuid())
+  email               String           @unique
   first_name          String
   middle_name         String?
   last_name           String?
   password            String
-  about               String          @default("")
-  email_verified      Boolean         @default(false)
-  blocked             Boolean         @default(false)
+  about               String           @default("")
+  email_verified      Boolean          @default(false)
+  blocked             Boolean          @default(false)
   last_ip             String?
-  last_login          DateTime        @default(now())
+  last_login          DateTime         @default(now())
   last_password_reset DateTime?
   magic_sent_time     DateTime?
-  user_idle_state     UserIdleState   @default(IDLE)
-  screen_idle_state   ScreenIdleState @default(LOCKED)
+  user_idle_state     UserIdleState    @default(IDLE)
+  screen_idle_state   ScreenIdleState  @default(LOCKED)
   roles               Role[]
   mobile              String?
-  mobile_verified     Boolean         @default(false)
-  country_code        Int             @default(0)
-  avatar              String          @default("https://www.gravatar.com/avatar/00000000000000000000000000000000")
+  mobile_verified     Boolean          @default(false)
+  country_code        Int              @default(0)
+  avatar              String           @default("https://www.gravatar.com/avatar/00000000000000000000000000000000")
   fcm_tokens          String[]
   locations           Location[]
-  created_at          DateTime        @default(now())
-  updated_at          DateTime        @updatedAt
+  credential_id       String           @default(uuid())
+  authenticators      Authenticators[]
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @updatedAt
+}
+
+model Authenticators {
+  id         String  @id @default(uuid())
+  name       String
+  user       User    @relation(fields: [user_id], references: [id])
+  user_id    String
+  registered Boolean @default(false)
+  auth_info  Json?
 }
 
 model Role {

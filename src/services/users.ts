@@ -12,7 +12,7 @@ import {
   UserFcmOutputDTO,
 } from "../interface/User";
 import { HttpError, NotFoundError } from "../api/errors";
-import { PrismaClient, User } from "@prisma/client";
+import { Authenticators, PrismaClient, User } from "@prisma/client";
 
 let eventDispatcher = new EventDispatcher();
 
@@ -46,12 +46,28 @@ export default class UserService {
 
   public async GetUser(id: string): Promise<User> {
     this.logger.silly("🤵 Finding user with id " + id);
-    let user = await this.prisma.user.findFirst({
+    let user = await this.prisma.user.findUnique({
       where: {
         id,
       },
-      include: {
-        roles: true,
+    });
+
+    if (user) {
+      delete user.password;
+      delete user.email_verified;
+      delete user.mobile_verified;
+    } else {
+      throw new HttpError(404, "User not found");
+    }
+
+    return user;
+  }
+
+  public async GetUserByEmail(email: string): Promise<User> {
+    this.logger.silly("🤵 Finding user with email " + email);
+    let user = await this.prisma.user.findUnique({
+      where: {
+        email: email,
       },
     });
 
@@ -205,5 +221,43 @@ export default class UserService {
     delete updated.mobile_verified;
 
     return updated;
+  }
+
+  public async CreateAuthenticatorData(
+    user_id: string,
+    name: string,
+    data: object
+  ): Promise<Authenticators> {
+    this.logger.silly("🤵 Update authentication data");
+
+    let created = await this.prisma.authenticators.create({
+      data: {
+        name,
+        auth_info: data,
+        registered: true,
+        user: {
+          connect: {
+            id: user_id,
+          },
+        },
+      },
+    });
+
+    return created;
+  }
+
+  public async GetAuthenticators(user_id: string): Promise<Authenticators[]> {
+    this.logger.silly("🤵 Getting authenticator data");
+
+    let data = await this.prisma.user.findUnique({
+      where: {
+        id: user_id,
+      },
+      select: {
+        authenticators: true,
+      },
+    });
+
+    return data.authenticators;
   }
 }

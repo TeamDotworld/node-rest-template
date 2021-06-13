@@ -14,6 +14,9 @@ export default {
   logs: {
     level: process.env.LOG_LEVEL || "silly",
   },
+  fido: {
+    challenge_secret: process.env.FIDO_JWT_SECRET || "def@ulT",
+  },
   keys: {
     public: process.env.PUBLIC_KEY || "",
     private: process.env.PRIVATE_KEY || "",

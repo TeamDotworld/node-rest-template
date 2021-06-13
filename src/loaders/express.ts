@@ -1,7 +1,9 @@
 import express, { Express, Request, Response } from "express";
 
 import cors from "cors";
+import crypto from "crypto";
 import passport from "passport";
+import cookieSession from "cookie-session";
 
 import Logger from "./logger";
 import v1Routes from "../api/v1";
@@ -16,6 +18,16 @@ export default ({ app }: { app: Express }) => {
   app.head("/health_check", (_, res) => {
     res.status(200).end();
   });
+
+  app.use(
+    cookieSession({
+      name: "session",
+      keys: [crypto.randomBytes(32).toString("hex")],
+
+      // Cookie Options
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    })
+  );
 
   // Useful if you're behind a reverse proxy (Heroku, Bluemix, AWS ELB, Nginx, etc)
   // It shows the real origin IP in the heroku or Cloudwatch logs
@@ -49,7 +61,7 @@ export default ({ app }: { app: Express }) => {
     app.use("/api/v1", route());
   });
 
-  /// catch 404
+  // catch 404
   app.use((req, res) => {
     return res.status(404).json({
       status: false,
