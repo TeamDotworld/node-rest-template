@@ -5,7 +5,7 @@
 - Node.js
 - TypeScript
 - Express
-- Routing-Controller
+- WebAuthn
 - Graylog + Winston
 - Prisma ORM
 - MQTT
@@ -22,9 +22,4 @@
 
 TPM Webauthn
 
-- https://www.w3.org/TR/webauthn-2/#sctn-privacy-considerations-client
-- https://webauthn.guide/
-- https://webauthnsample.azurewebsites.net/
-- https://docs.microsoft.com/en-us/archive/microsoft-edge/legacy/developer/dev-guide/windows-integration/web-authentication
-- https://github.com/MicrosoftEdge/webauthnsample
-- https://github.com/google/webauthndemo
+- https://simplewebauthn.dev/
