@@ -223,18 +223,43 @@ export default class UserService {
     return updated;
   }
 
+  public async SaveUserChallenge(
+    user_id: string,
+    challenge: string
+  ): Promise<User> {
+    this.logger.silly("🤵 Update authentication data");
+
+    let created = await this.prisma.user.update({
+      where: {
+        id: user_id,
+      },
+      data: {
+        fido_challenge: challenge,
+      },
+    });
+
+    return created;
+  }
+
   public async CreateAuthenticatorData(
     user_id: string,
     name: string,
-    data: object
+    credentialID: string,
+    credentialPublicKey: string,
+    counter: number,
+    _data: object,
+    fmt: string = "unknown"
   ): Promise<Authenticators> {
     this.logger.silly("🤵 Update authentication data");
 
     let created = await this.prisma.authenticators.create({
       data: {
         name,
-        auth_info: data,
+        counter: counter,
+        credentialID: credentialID,
+        credentialPublicKey: credentialPublicKey,
         registered: true,
+        fmt,
         user: {
           connect: {
             id: user_id,

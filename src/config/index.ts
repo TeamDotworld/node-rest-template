@@ -9,6 +9,7 @@ process.env.NODE_ENV = process.env.NODE_ENV || "development";
 process.env.PORT = process.env.PORT || "8000";
 export default {
   host: process.env.HOST || "127.0.0.1",
+  rpID: process.env.HOST || "localhost",
   frontend: process.env.FRONTEND_URL || "",
   port: parseInt(process.env.PORT) || 8000,
   logs: {

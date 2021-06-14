@@ -93,18 +93,23 @@ model User {
   fcm_tokens          String[]
   locations           Location[]
   credential_id       String           @default(uuid())
+  fido_challenge      String?
   authenticators      Authenticators[]
   created_at          DateTime         @default(now())
   updated_at          DateTime         @updatedAt
 }
 
 model Authenticators {
-  id         String  @id @default(uuid())
-  name       String
-  user       User    @relation(fields: [user_id], references: [id])
-  user_id    String
-  registered Boolean @default(false)
-  auth_info  Json?
+  id                  String  @id @default(uuid())
+  name                String
+  fmt                 String  @default("unknown")
+  credentialID        String
+  credentialPublicKey String
+  counter             BigInt
+  user                User    @relation(fields: [user_id], references: [id])
+  user_id             String
+  registered          Boolean @default(false)
+  raw                 Json?
 }
 
 model Role {

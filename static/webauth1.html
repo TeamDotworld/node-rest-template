@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Webauthn Demo</title>
+
+    <script src="https://unpkg.com/@simplewebauthn/browser/dist/es2018/index.umd.min.js"></script>
+  </head>
+  <body>
+    <input type="text" id="email" />
+    <button onclick="register()">Register</button>
+    <button onclick="validate()">Authenticate</button>
+    <script>
+      async function register() {
+        const { startAttestation } = SimpleWebAuthnBrowser;
+        try {
+          var myHeaders = new Headers();
+          myHeaders.append(
+            "Authorization",
+            "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQwN2IwM2EzLTVkODUtNGZmZi1hYmY0LWE4YmMzMDNiOWFhNCIsImVtYWlsIjoibmF2ZWVuQGRvdHdvcmxkLmluIiwiaWF0IjoxNjIzNjMxNzY2LCJleHAiOjE2MjM4OTA5NjZ9.uipzZdna4OSHB-XeUizz2Kkc7ZT5ll5hVHZmCMaKinsYGJ1-h8mzAF2zjgQxRusT29QWw8PeLBw4b9RBULgJmPbD6IOpGHpRWXwrtXmxR8mS0h5JGcSMRj5PAqGK9x5LDVVjWG-uXCrlDkhrLbjjTcHmMwxHrYu9EuclPYrOGaPfSVC_NH0fYh75eD9AIBwQY-jX23Dkyv67nJn_wR5P5gPrufwavQB7_5c0hjYZ17Ge54sT5nH2lPux8B2UMAs77Mi10tEd5l7uQ5YaHh-vT10UsCIk5fAurIDr2bsjgsZgRe4tJ2Ge6NsMxGJqBUHDWFxQxIbheeNFh4_IgvEQ3A"
+          );
+
+          var requestOptions = {
+            method: "GET",
+            headers: myHeaders,
+            redirect: "follow",
+          };
+
+          let resp = await (
+            await fetch(
+              "http://localhost:8000/api/v1/users/webauthn/challenge",
+              requestOptions
+            )
+          ).json();
+
+          attResp = await startAttestation(resp.data);
+
+          const verificationResp = await fetch(
+            "http://localhost:8000/api/v1/users/webauthn?name=test",
+            {
+              method: "POST",
+              headers: {
+                Authorization:
+                  "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQwN2IwM2EzLTVkODUtNGZmZi1hYmY0LWE4YmMzMDNiOWFhNCIsImVtYWlsIjoibmF2ZWVuQGRvdHdvcmxkLmluIiwiaWF0IjoxNjIzNjMxNzY2LCJleHAiOjE2MjM4OTA5NjZ9.uipzZdna4OSHB-XeUizz2Kkc7ZT5ll5hVHZmCMaKinsYGJ1-h8mzAF2zjgQxRusT29QWw8PeLBw4b9RBULgJmPbD6IOpGHpRWXwrtXmxR8mS0h5JGcSMRj5PAqGK9x5LDVVjWG-uXCrlDkhrLbjjTcHmMwxHrYu9EuclPYrOGaPfSVC_NH0fYh75eD9AIBwQY-jX23Dkyv67nJn_wR5P5gPrufwavQB7_5c0hjYZ17Ge54sT5nH2lPux8B2UMAs77Mi10tEd5l7uQ5YaHh-vT10UsCIk5fAurIDr2bsjgsZgRe4tJ2Ge6NsMxGJqBUHDWFxQxIbheeNFh4_IgvEQ3A",
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(attResp),
+            }
+          );
+
+          // Wait for the results of verification
+          const verificationJSON = await verificationResp.json();
+          console.log(verificationJSON);
+        } catch (error) {
+          // Some basic error handling
+          if (error.name === "InvalidStateError") {
+            console.log(
+              "Error: Authenticator was probably already registered by user"
+            );
+          }
+          console.error(error);
+          throw error;
+        }
+      }
+    </script>
+  </body>
+</html>

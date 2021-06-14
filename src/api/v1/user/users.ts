@@ -3,14 +3,20 @@ import { celebrate, Joi } from "celebrate";
 import { Logger } from "winston";
 import { Container } from "typedi";
 import passport from "passport";
-import jwt from "jsonwebtoken";
+
+import {
+  GenerateAttestationOptionsOpts,
+  generateAttestationOptions,
+  VerifiedAttestation,
+  VerifyAttestationResponseOpts,
+  verifyAttestationResponse,
+} from "@simplewebauthn/server";
 
 import config from "../../../config";
 import UserService from "../../../services/users";
 import { UserUpdateDTO } from "../../../interface/User";
-import helpers from "../../../helpers";
-import base64url from "base64url";
-import { HttpError } from "../../../api/errors";
+import { BadRequestError } from "../../../api/errors";
+import { AttestationCredentialJSON } from "@simplewebauthn/typescript-types";
 
 const route = Router();
 
@@ -98,85 +104,129 @@ export default (app: Router) => {
     }
   );
 
-  // Register new webauthn
+  // Attestation challenge
+  route.get(
+    "/webauthn/challenge",
+    passport.authenticate("jwt", { session: false }),
+    async (req: Request, res: Response, next: NextFunction) => {
+      const logger: Logger = Container.get("logger");
+      try {
+        let { id: user_id, credential_id, first_name, last_name } = req.user;
+        const userService = Container.get(UserService);
+        let authenticators = await userService.GetAuthenticators(user_id);
+
+        const opts: GenerateAttestationOptionsOpts = {
+          rpName: "Dotworld Technologies",
+          rpID: config.rpID,
+          userID: credential_id,
+          userName: `${first_name} ${last_name}`,
+          timeout: 60000,
+          attestationType: "indirect",
+          excludeCredentials: authenticators.map((dev) => ({
+            id: Buffer.from(dev.credentialID, "base64"),
+            type: "public-key",
+            transports: ["usb", "ble", "nfc", "internal"],
+          })),
+          authenticatorSelection: {
+            userVerification: "preferred",
+            requireResidentKey: false,
+          },
+        };
+
+        const options = generateAttestationOptions(opts);
+
+        await userService.SaveUserChallenge(user_id, options.challenge);
+
+        res.send({
+          status: true,
+          data: options,
+        });
+      } catch (e) {
+        logger.error("🔥 error: %o", e);
+        return next(e);
+      }
+    }
+  );
+
+  // Verify Attestation
   route.post(
     "/webauthn",
     passport.authenticate("jwt", { session: false }),
-    async (request: Request, response: Response, next: NextFunction) => {
+    async (req: Request, res: Response, next: NextFunction) => {
       const logger: Logger = Container.get("logger");
-
       try {
-        let { id: user_id } = request.user;
-        const userServiceInstance = Container.get(UserService);
-        if (
-          !request.body ||
-          !request.body.id ||
-          !request.body.rawId ||
-          !request.body.response ||
-          !request.body.type ||
-          request.body.type !== "public-key"
-        ) {
-          return response.json({
-            status: "failed",
-            message:
-              "Response missing one or more of id/rawId/response/type fields, or type is not public-key!",
-          });
+        let name = req.query.name as string;
+        if (!name) {
+          throw new BadRequestError("Need name for saving after validation");
+        }
+        let { id: user_id } = req.user;
+        const body: AttestationCredentialJSON = req.body;
+        const userService = Container.get(UserService);
+
+        let authenticators = await userService.GetAuthenticators(user_id);
+        let user = await userService.GetUser(user_id);
+
+        const expectedChallenge = user.fido_challenge;
+
+        let verification: VerifiedAttestation;
+        try {
+          const opts: VerifyAttestationResponseOpts = {
+            credential: body,
+            expectedChallenge: `${expectedChallenge}`,
+            expectedOrigin: config.frontend,
+            expectedRPID: config.rpID,
+          };
+          verification = await verifyAttestationResponse(opts);
+        } catch (error) {
+          console.error(error);
+          throw new BadRequestError(
+            error.message || "unable to start verification"
+          );
         }
 
-        let webauthnResp = request.body;
-        let clientData = JSON.parse(
-          base64url.decode(webauthnResp.response.clientDataJSON)
-        );
+        const { verified, attestationInfo } = verification;
 
-        /* Check challenge... */
-        if (clientData.challenge) {
-          try {
-            jwt.verify(
-              base64url.decode(clientData.challenge),
-              config.fido.challenge_secret
-            );
-          } catch (err) {
-            throw new HttpError(
-              400,
-              "Invalid challenge in collectedClientData. Challenge verification failed"
-            );
-          }
-        }
+        if (verified && attestationInfo) {
+          const { fmt, credentialPublicKey, credentialID, counter } =
+            attestationInfo;
 
-        /* ...and origin */
-        logger.info("Client Data origin " + clientData.origin);
-        if (clientData.origin !== config.frontend) {
-          return response.json({
-            status: "failed",
-            message: "Origin don't match!",
-          });
-        }
+          const existingDevice = authenticators.find(
+            (device) =>
+              device.credentialID ===
+              Buffer.from(credentialID).toString("base64")
+          );
 
-        let result;
-        if (webauthnResp.response.attestationObject !== undefined) {
-          /* This is create cred */
-          result = helpers.verifyAuthenticatorAttestationResponse(webauthnResp);
-          if (result.verified) {
-            await userServiceInstance.CreateAuthenticatorData(
+          if (!existingDevice) {
+            // Save the data to db
+            await userService.CreateAuthenticatorData(
               user_id,
-              "sample_tpm",
-              result.authrInfo
+              name,
+              Buffer.from(credentialID).toString("base64"),
+              Buffer.from(credentialPublicKey).toString("base64"),
+              counter,
+              {},
+              fmt
             );
+          } else {
+            return res.json({
+              status: false,
+              message: "Device already registered",
+              data: {
+                verified: true,
+              },
+            });
           }
-        } else {
-          return response.json({
-            status: "failed",
-            message: "Cannot determine type of response!",
-          });
         }
 
-        if (result.verified) {
-          return response.json({ status: "ok" });
-        } else {
-          return response.json({
-            status: "failed",
-            message: "Can not authenticate signature!",
+        if (verified) {
+          return res.json({
+            status: true,
+            data: {
+              verified: verified,
+            },
           });
+        } else {
+          throw new BadRequestError("Unable to verify");
         }
       } catch (e) {
         logger.error("🔥 error: %o", e);
