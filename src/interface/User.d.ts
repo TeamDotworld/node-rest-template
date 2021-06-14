@@ -1,3 +1,5 @@
+import { AssertionCredentialJSON } from "@simplewebauthn/typescript-types";
+
 export interface IUser {
   id: string;
   name: string;
@@ -13,6 +15,11 @@ export interface TokenPayload {
 export interface IUserLoginDTO {
   email: string;
   password: string;
+}
+
+export interface AssertionCredentialJSONExtra {
+  email: string;
+  data: AssertionCredentialJSON;
 }
 
 export interface UserListDTO {

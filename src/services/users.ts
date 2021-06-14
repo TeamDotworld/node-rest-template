@@ -285,4 +285,22 @@ export default class UserService {
 
     return data.authenticators;
   }
+
+  public async UpdateAuthenticatorsCounter(
+    auth_id: string,
+    counter: number
+  ): Promise<Authenticators> {
+    this.logger.silly("🤵 Getting authenticator data");
+
+    let data = await this.prisma.authenticators.update({
+      where: {
+        id: auth_id,
+      },
+      data: {
+        counter: counter,
+      },
+    });
+
+    return data;
+  }
 }

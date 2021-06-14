@@ -103,9 +103,10 @@ model Authenticators {
   id                  String  @id @default(uuid())
   name                String
   fmt                 String  @default("unknown")
+  transport           String?
   credentialID        String
   credentialPublicKey String
-  counter             BigInt
+  counter             BigInt  @default(0)
   user                User    @relation(fields: [user_id], references: [id])
   user_id             String
   registered          Boolean @default(false)

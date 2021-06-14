@@ -6,189 +6,111 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Webauthn Demo</title>
 
-    <script src="https://cdn.jsdelivr.net/npm/base64-js@1.5.1/base64js.min.js"></script>
+    <script src="https://unpkg.com/@simplewebauthn/browser/dist/es2018/index.umd.min.js"></script>
   </head>
   <body>
     <input type="text" id="email" />
     <button onclick="register()">Register</button>
     <button onclick="validate()">Authenticate</button>
     <script>
-      /**
-       * Base64 encodes an array buffer
-       * @param {ArrayBuffer} arrayBuffer
-       */
-      function base64encode(arrayBuffer) {
-        if (!arrayBuffer || arrayBuffer.length == 0) return undefined;
+      async function register() {
+        const { startAttestation } = SimpleWebAuthnBrowser;
+        try {
+          var myHeaders = new Headers();
+          myHeaders.append(
+            "Authorization",
+            "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQwN2IwM2EzLTVkODUtNGZmZi1hYmY0LWE4YmMzMDNiOWFhNCIsImVtYWlsIjoibmF2ZWVuQGRvdHdvcmxkLmluIiwiaWF0IjoxNjIzNjMxNzY2LCJleHAiOjE2MjM4OTA5NjZ9.uipzZdna4OSHB-XeUizz2Kkc7ZT5ll5hVHZmCMaKinsYGJ1-h8mzAF2zjgQxRusT29QWw8PeLBw4b9RBULgJmPbD6IOpGHpRWXwrtXmxR8mS0h5JGcSMRj5PAqGK9x5LDVVjWG-uXCrlDkhrLbjjTcHmMwxHrYu9EuclPYrOGaPfSVC_NH0fYh75eD9AIBwQY-jX23Dkyv67nJn_wR5P5gPrufwavQB7_5c0hjYZ17Ge54sT5nH2lPux8B2UMAs77Mi10tEd5l7uQ5YaHh-vT10UsCIk5fAurIDr2bsjgsZgRe4tJ2Ge6NsMxGJqBUHDWFxQxIbheeNFh4_IgvEQ3A"
+          );
 
-        return btoa(
-          String.fromCharCode.apply(null, new Uint8Array(arrayBuffer))
-        );
+          var requestOptions = {
+            method: "GET",
+            headers: myHeaders,
+            redirect: "follow",
+          };
+
+          let resp = await (
+            await fetch(
+              "http://localhost:8000/api/v1/users/webauthn/challenge",
+              requestOptions
+            )
+          ).json();
+
+          attResp = await startAttestation(resp.data);
+
+          const verificationResp = await fetch(
+            "http://localhost:8000/api/v1/users/webauthn?name=test",
+            {
+              method: "POST",
+              headers: {
+                Authorization:
+                  "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQwN2IwM2EzLTVkODUtNGZmZi1hYmY0LWE4YmMzMDNiOWFhNCIsImVtYWlsIjoibmF2ZWVuQGRvdHdvcmxkLmluIiwiaWF0IjoxNjIzNjMxNzY2LCJleHAiOjE2MjM4OTA5NjZ9.uipzZdna4OSHB-XeUizz2Kkc7ZT5ll5hVHZmCMaKinsYGJ1-h8mzAF2zjgQxRusT29QWw8PeLBw4b9RBULgJmPbD6IOpGHpRWXwrtXmxR8mS0h5JGcSMRj5PAqGK9x5LDVVjWG-uXCrlDkhrLbjjTcHmMwxHrYu9EuclPYrOGaPfSVC_NH0fYh75eD9AIBwQY-jX23Dkyv67nJn_wR5P5gPrufwavQB7_5c0hjYZ17Ge54sT5nH2lPux8B2UMAs77Mi10tEd5l7uQ5YaHh-vT10UsCIk5fAurIDr2bsjgsZgRe4tJ2Ge6NsMxGJqBUHDWFxQxIbheeNFh4_IgvEQ3A",
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(attResp),
+            }
+          );
+
+          // Wait for the results of verification
+          const verificationJSON = await verificationResp.json();
+          console.log(verificationJSON);
+        } catch (error) {
+          // Some basic error handling
+          if (error.name === "InvalidStateError") {
+            console.log(
+              "Error: Authenticator was probably already registered by user"
+            );
+          }
+          console.error(error);
+          throw error;
+        }
       }
-
-      // Encode an ArrayBuffer into a base64 string.
-      function bufferEncode(value) {
-        return base64js
-          .fromByteArray(value)
-          .replace(/\+/g, "-")
-          .replace(/\//g, "_")
-          .replace(/=/g, "");
-      }
-
-      // Don't drop any blanks
-      // decode
-      function bufferDecode(value) {
-        return Uint8Array.from(atob(value), (c) => c.charCodeAt(0));
-      }
-
-      /**
-       * Converts an array buffer to a UTF-8 string
-       * @param {ArrayBuffer} arrayBuffer
-       * @returns {string}
-       */
-      function arrayBufferToString(arrayBuffer) {
-        return String.fromCharCode.apply(null, new Uint8Array(arrayBuffer));
-      }
-
-      var preformatMakeCredReq = (makeCredentialOptions) => {
-        makeCredentialOptions.challenge = bufferDecode(
-          makeCredentialOptions.challenge
-        );
-        makeCredentialOptions.user.id = bufferDecode(
-          makeCredentialOptions.user.id
-        );
-
-        return makeCredentialOptions;
-      };
 
       async function validate() {
         try {
-          let result = await getChallenge();
-          let options = result.data.options;
-
-          const rawAssertion = await navigator.credentials.get({
-            publicKey: preformatMakeCredReq({
-              ...options,
-              allowCredentials: [],
-            }),
-          });
-
-          let clientDataJSON = new Uint8Array(
-            rawAssertion.response.clientDataJSON
-          );
-
-          //   var assertion = {
-          //     id: base64encode(rawAssertion.rawId),
-          //     clientDataJSON: arrayBufferToString(rawAssertion.response.clientDataJSON),
-          //     userHandle: base64encode(rawAssertion.response.userHandle),
-          //     signature: base64encode(rawAssertion.response.signature),
-          //     authenticatorData: base64encode(rawAssertion.response.authenticatorData)
-          // };
+          const { startAssertion } = SimpleWebAuthnBrowser;
 
           let email = document.querySelector("#email").value;
-          if (!email) throw new Error("no input");
+          if (!email) throw new Error("Please enter email");
 
-          var finalMsg = {
-            email,
-            rawId: rawAssertion.id,
-            id: base64encode(rawAssertion.rawId),
-            userHandle: base64encode(rawAssertion.response.userHandle),
-            signature: base64encode(rawAssertion.response.signature),
-            type: rawAssertion.type,
-            response: {
-              authenticatorData: base64encode(
-                rawAssertion.response.authenticatorData
-              ),
-              clientDataJSON: bufferEncode(clientDataJSON),
-            },
-          };
+          let resp = await (
+            await fetch(
+              "http://localhost:8000/api/v1/auth/webauthn/challenge?email=" +
+                email,
+              {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+              }
+            )
+          ).json();
+          let asseResp;
+          try {
+            asseResp = await startAssertion(resp.data);
+          } catch (error) {
+            throw error;
+          }
 
-          let resp = await fetch("http://localhost:8000/api/v1/auth/webauthn", {
-            body: JSON.stringify(finalMsg),
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization:
-                "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQwMTNlZGQ2LWExN2UtNGNlMy04YjRjLTkzNDQ0MDMyNTlmMyIsImVtYWlsIjoibmF2ZWVuQGRvdHdvcmxkLmluIiwiaWF0IjoxNjIzNTczODAzLCJleHAiOjE2MjM4MzMwMDN9.ZNQcJrtDM5tzT1qvyRSmGaLJDuRl9SgYMfZJzXoXoNpIIl4XOuXRs0oYUsKTDkDO2upWLo9fZkCuaCtx8xRMltbFkbSsoORfO3aLWZQ1-4leBmz2Kk_UWmni47kUN_GJJuHPCbq4xaOdHJ0kLMT-0LW3kjNbWs-Cx09-IyRe3Is2LiUFq6liLDYjkCPJVGw-sjatN8dAf5cS5-86Qto53bmVd9zsCVbekb_-e9qEYTeNLyCRBJFb4Y2d0ZT9XDvob6whcbXHglA00T-R8-DGcTMvL3A7DxCVsu-p-7hCt9dV7g_KO17FhLXpOlHHqPjDhn2TWj9vXr33_qTtEIPQ3Q",
-            },
-          });
-
-          console.log(resp);
-        } catch (err) {
-          console.error(err);
-        }
-      }
-
-      async function register() {
-        try {
-          let result = await getChallenge();
-          let options = result.data.options;
-
-          const credential = await navigator.credentials.create({
-            publicKey: preformatMakeCredReq(options),
-          });
-          console.log(credential);
-          registerNewCredential(credential);
-        } catch (err) {
-          console.error(err);
-        }
-      }
-      async function registerNewCredential(newCredential) {
-        console.log("registering new credentials");
-        try {
-          let attestationObject = new Uint8Array(
-            newCredential.response.attestationObject
-          );
-          let clientDataJSON = new Uint8Array(
-            newCredential.response.clientDataJSON
-          );
-          let rawId = new Uint8Array(newCredential.rawId);
-
-          let data = {
-            id: newCredential.id,
-            rawId: bufferEncode(rawId),
-            type: newCredential.type,
-            response: {
-              attestationObject: bufferEncode(attestationObject),
-              clientDataJSON: bufferEncode(clientDataJSON),
-            },
-          };
-
-          let resp = await fetch(
-            "http://localhost:8000/api/v1/users/webauthn",
+          const verificationResp = await fetch(
+            "http://localhost:8000/api/v1/auth/webauthn",
             {
-              body: JSON.stringify(data),
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                Authorization:
-                  "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQwMTNlZGQ2LWExN2UtNGNlMy04YjRjLTkzNDQ0MDMyNTlmMyIsImVtYWlsIjoibmF2ZWVuQGRvdHdvcmxkLmluIiwiaWF0IjoxNjIzNTczODAzLCJleHAiOjE2MjM4MzMwMDN9.ZNQcJrtDM5tzT1qvyRSmGaLJDuRl9SgYMfZJzXoXoNpIIl4XOuXRs0oYUsKTDkDO2upWLo9fZkCuaCtx8xRMltbFkbSsoORfO3aLWZQ1-4leBmz2Kk_UWmni47kUN_GJJuHPCbq4xaOdHJ0kLMT-0LW3kjNbWs-Cx09-IyRe3Is2LiUFq6liLDYjkCPJVGw-sjatN8dAf5cS5-86Qto53bmVd9zsCVbekb_-e9qEYTeNLyCRBJFb4Y2d0ZT9XDvob6whcbXHglA00T-R8-DGcTMvL3A7DxCVsu-p-7hCt9dV7g_KO17FhLXpOlHHqPjDhn2TWj9vXr33_qTtEIPQ3Q",
               },
+              body: JSON.stringify({
+                email: email,
+                data: asseResp,
+              }),
             }
           );
-          console.log(resp);
+
+          // Wait for the results of verification
+          const verificationJSON = await verificationResp.json();
+          console.log(verificationJSON);
         } catch (err) {
           console.error(err);
         }
-      }
-
-      async function getChallenge() {
-        var requestOptions = {
-          method: "GET",
-          headers: {
-            Authorization:
-              "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQwMTNlZGQ2LWExN2UtNGNlMy04YjRjLTkzNDQ0MDMyNTlmMyIsImVtYWlsIjoibmF2ZWVuQGRvdHdvcmxkLmluIiwiaWF0IjoxNjIzNTczODAzLCJleHAiOjE2MjM4MzMwMDN9.ZNQcJrtDM5tzT1qvyRSmGaLJDuRl9SgYMfZJzXoXoNpIIl4XOuXRs0oYUsKTDkDO2upWLo9fZkCuaCtx8xRMltbFkbSsoORfO3aLWZQ1-4leBmz2Kk_UWmni47kUN_GJJuHPCbq4xaOdHJ0kLMT-0LW3kjNbWs-Cx09-IyRe3Is2LiUFq6liLDYjkCPJVGw-sjatN8dAf5cS5-86Qto53bmVd9zsCVbekb_-e9qEYTeNLyCRBJFb4Y2d0ZT9XDvob6whcbXHglA00T-R8-DGcTMvL3A7DxCVsu-p-7hCt9dV7g_KO17FhLXpOlHHqPjDhn2TWj9vXr33_qTtEIPQ3Q",
-          },
-        };
-
-        let email = document.querySelector("#email").value;
-        if (!email) throw new Error("no input");
-        return await (
-          await fetch(
-            "http://localhost:8000/api/v1/auth/webauthn/challenge?email=" +
-              email,
-            requestOptions
-          )
-        ).json();
       }
     </script>
   </body>
