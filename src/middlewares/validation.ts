@@ -1,5 +1,5 @@
 import { celebrate, Joi, Segments } from "celebrate";
-import { CallProvider, DeviceType } from "@prisma/client";
+import { CallProvider, DeviceType, OSType } from "@prisma/client";
 
 const loginSchema = celebrate({
   [Segments.BODY]: Joi.object({
@@ -22,20 +22,29 @@ const newDeviceSchema = celebrate({
     can_screen_share: Joi.boolean().default(false).optional(),
     supported_modes: Joi.array().items(Joi.string().uuid()).required(),
     call_provider: Joi.string()
-      .valid(CallProvider.AGORA, CallProvider.TWILIO)
+      .valid(CallProvider.AGORA, CallProvider.TWILIO, CallProvider.SIP)
       .required(),
-    device_type: Joi.string()
+    os_type: Joi.string()
       .valid(
-        DeviceType.ANDROID,
-        DeviceType.EMBEDDED,
-        DeviceType.IOS,
-        DeviceType.LINUX,
-        DeviceType.MAC,
-        DeviceType.UNKNOWN,
-        DeviceType.WINDOWS
+        OSType.ANDROID,
+        OSType.EMBEDDED,
+        OSType.IOS,
+        OSType.LINUX,
+        OSType.MAC,
+        OSType.UNKNOWN,
+        OSType.WINDOWS
       )
       .required(),
-    sub_type: Joi.string().optional(),
+    device_type: Joi.string().valid(
+      DeviceType.INTERCOM,
+      DeviceType.KIOSK,
+      DeviceType.SECURITY_PHONE,
+      DeviceType.UNASSIGNED,
+      DeviceType.VIRTUAL_CHARACTER,
+      DeviceType.VIZITIN,
+      DeviceType.CAMERA
+    ),
+    device_sub_type: Joi.string().optional(),
     can_give_telemetry: Joi.boolean().optional(),
   }),
 });

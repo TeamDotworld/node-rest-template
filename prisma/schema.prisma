@@ -19,7 +19,7 @@ enum ReleaseType {
   ARCHIVE
 }
 
-enum DeviceType {
+enum OSType {
   WINDOWS
   MAC
   LINUX
@@ -27,6 +27,16 @@ enum DeviceType {
   IOS
   EMBEDDED
   UNKNOWN
+}
+
+enum DeviceType {
+  SECURITY_PHONE
+  KIOSK
+  VIZITIN
+  VIRTUAL_CHARACTER
+  INTERCOM
+  CAMERA
+  UNASSIGNED
 }
 
 enum Status {
@@ -52,6 +62,7 @@ enum CallType {
 enum CallProvider {
   TWILIO
   AGORA
+  SIP
 }
 
 enum UserIdleState {
@@ -129,6 +140,18 @@ model Permission {
   roles       Role[]
 }
 
+enum CallInitator {
+  USER
+  DEVICE
+  OTHER
+}
+
+enum CallStatus {
+  INITIATED
+  IN_PROGRESS
+  COMPLETED
+}
+
 model Device {
   id                 String       @id @default(uuid())
   name               String
@@ -140,8 +163,9 @@ model Device {
   supported_modes    CallType[]
   call_priority      CallPriority @default(SECURITY_PHONE)
   call_provider      CallProvider @default(TWILIO)
-  device_type        DeviceType   @default(ANDROID)
-  sub_type           String?
+  os_type            OSType       @default(ANDROID)
+  device_type        DeviceType   @default(UNASSIGNED)
+  device_sub_type    String?
   fcm_token          String?
   description        String?
   status             Status       @default(PROVISIONING)
@@ -172,6 +196,22 @@ model Location {
   updated_at  DateTime @updatedAt
 }
 
+model Call {
+  id            String       @id @default(uuid())
+  room_id       String       @unique
+  initator_type CallInitator @default(OTHER)
+  from          String
+  to            String[]
+  start_time    DateTime     @default(now())
+  end_time      DateTime?
+  duration      Float        @default(0)
+  recording     String[]
+  provider      CallProvider @default(TWILIO)
+  is_sip        Boolean      @default(false)
+  status        CallStatus   @default(INITIATED)
+  updated_at    DateTime     @updatedAt
+}
+
 model Sip {
   id           String  @id @default(uuid())
   name         String
@@ -194,7 +234,7 @@ model Software {
   version_code   Int         @default(0)
   version_name   String?
   min_sdk        Float       @default(0)
-  os             DeviceType  @default(UNKNOWN)
+  os             OSType      @default(UNKNOWN)
   path           String
   type           String?
   change_request String?
