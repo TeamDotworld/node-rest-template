@@ -42,6 +42,7 @@ export default class AuthService {
     if (!user) {
       throw new UnauthorizedError("Invalid login credentials");
     }
+    console.log(user);
     let same = await bcrypt.compare(password, user.password);
     if (same) {
       let token = helpers.generateLoginToken(user);

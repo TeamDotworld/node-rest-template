@@ -3,12 +3,14 @@ import { RoomInstance } from "twilio/lib/rest/video/v1/room";
 import { Container } from "typedi";
 import multer from "multer";
 import jwt from "jsonwebtoken";
+import axios, { AxiosRequestConfig } from "axios"
 
 import config from "../config";
 import AccessToken from "twilio/lib/jwt/AccessToken";
-import { User } from "@prisma/client";
+import { User, Device, Call, PrismaClient } from "@prisma/client";
 import { TokenPayload } from "../interface/User";
 
+const prisma = new PrismaClient();
 const VideoGrant = AccessToken.VideoGrant;
 
 const makeid = (length: number): string => {
@@ -57,8 +59,11 @@ const createToken = async (
 
 const closeRoom = async (roomName: string): Promise<RoomInstance> => {
   let twilio: Twilio = Container.get("twilio");
-  let room = twilio.video.rooms(roomName).update({ status: "completed" });
-  return room;
+  let checkRoom = await twilio.video.rooms(roomName).fetch();
+  if ((checkRoom).status !== "completed") {
+    return twilio.video.rooms(roomName).update({ status: "completed" });
+  }
+  return checkRoom;
 };
 
 const storage = multer.diskStorage({
@@ -71,7 +76,7 @@ const storage = multer.diskStorage({
   },
 });
 
-function formatBytes(bytes, decimals = 2) {
+function formatBytes(bytes: number, decimals = 2) {
   if (bytes === 0) return "0 Bytes";
 
   const k = 1024;
@@ -93,9 +98,152 @@ function generateLoginToken(user: User): string {
   return token;
 }
 
-function verifyMagicLink(token): TokenPayload {
+function verifyMagicLink(token: string): TokenPayload {
   var decoded = jwt.verify(token, config.magic.key);
   return decoded as TokenPayload;
+}
+
+async function notifyUsers(users: string | any[], device: Device) {
+  try {
+    let i = 0;
+    let userNotConnected: Call;
+    async function notify() {
+      if (i < users.length) {
+        if (i) {
+          userNotConnected = await prisma.call.findFirst({
+            where: {
+              status: "IN_PROGRESS",
+              from: users[i - 1].id,
+              // to: [device.id],
+            }
+          });
+        }
+        if (userNotConnected) {
+          clearInterval(closeTimeInterval);
+          return null;
+        } else {
+          if (users[i]?.fcm_tokens.length) {
+            let data = JSON.stringify({
+              to: users[i]?.fcm_tokens[0],
+              data: {
+                title: `Incoming call`,
+                body: `You have a incoming call from ${device.name}`,
+                icon: "firebase-logo.png",
+                data: {
+                  // todo :change url when front end is done
+                  url: `devices/${device.id}/${device.os_type}`,
+                },
+                actions: [
+                  {
+                    title: "Accept",
+                    action: "accept",
+                    icon: "icons/heart.png",
+                  },
+                  {
+                    title: "Reject",
+                    action: "reject",
+                    icon: "icons/cross.png",
+                  },
+                ],
+              },
+              webpush: {
+                headers: {
+                  Urgency: "high",
+                  TTL: "4000",
+                },
+              },
+            });
+
+            let config: AxiosRequestConfig = {
+              method: "POST",
+              url: "https://fcm.googleapis.com/fcm/send",
+              headers: {
+                Authorization: `key=${process.env.SERVER_KEY}`,
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+              },
+              data: data,
+            };
+
+            let response = await axios(config);
+            i++;
+            return response.data;
+          } else {
+            i++;
+            return "Got an error from IAM";
+          }
+        }
+      } else {
+        clearInterval(closeTimeInterval);
+        return null;
+      }
+    }
+    await notify();
+    let closeTimeInterval = setInterval(async () => {
+      notify();
+    }, 15000);
+  } catch (error) {
+    // logger.error(error.message || 'Notification sending process Stoped', { backtrace: error });
+    return;
+  }
+}
+
+async function notifySecuritys(securityList: Device[], device: Device) {
+  try {
+    let i = 0;
+    let userNotConnected: Call;
+    async function notify() {
+      if (i < securityList.length) {
+        if (i) {
+          userNotConnected = await prisma.call.findFirst({
+            where: {
+              status: "IN_PROGRESS",
+              from: securityList[i - 1].id,
+              // to: [device.id],
+            }
+          });
+        }
+        if (userNotConnected) {
+          clearInterval(closeTimeInterval);
+          return null;
+        } else {
+          let data = JSON.stringify({
+            to: securityList[i].fcm_token,
+            collapse_key: "type_a",
+            data: {
+              device_id: device.id,
+              device_name: device.name,
+            },
+          });
+
+          var config: AxiosRequestConfig = {
+            method: "post",
+            url: "https://fcm.googleapis.com/fcm/send",
+            headers: {
+              Authorization: `key=${process.env.SERVER_KEY}`,
+              "Content-Type": "application/json",
+              "Access-Control-Allow-Origin": "*",
+            },
+            data: data,
+          };
+
+          let response = await axios(config);
+          i++;
+          return response.data;
+        }
+      } else {
+        clearInterval(closeTimeInterval);
+        return null;
+      }
+    }
+
+    await notify();
+    let closeTimeInterval = setInterval(async () => {
+      notify();
+    }, 15000);
+  } catch (error) {
+    // logger.error(error.message || 'Notification sending process Stoped', { backtrace: error });
+  }
 }
 
 export default {
@@ -107,4 +255,6 @@ export default {
   formatBytes,
   generateLoginToken,
   verifyMagicLink,
+  notifySecuritys,
+  notifyUsers
 };
