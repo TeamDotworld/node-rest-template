@@ -3,6 +3,8 @@ import { celebrate, Joi } from "celebrate";
 import { Logger } from "winston";
 import { Container } from "typedi";
 import passport from "passport";
+import QRCode from "qrcode";
+import { authenticator } from "otplib";
 
 import {
   GenerateAttestationOptionsOpts,
@@ -15,12 +17,14 @@ import {
 import config from "../../../config";
 import UserService from "../../../services/users";
 import { UserUpdateDTO } from "../../../interface/User";
-import { BadRequestError } from "../../../api/errors";
+import { BadRequestError, HttpError } from "../../../api/errors";
 import { AttestationCredentialJSON } from "@simplewebauthn/typescript-types";
 
 const route = Router();
 
 export default (app: Router) => {
+  let twofaSecretsTmp = {};
+
   app.use("/users", route);
 
   // Get my details
@@ -113,7 +117,7 @@ export default (app: Router) => {
       try {
         let { id: user_id, credential_id, first_name, last_name } = req.user;
         const userService = Container.get(UserService);
-        let authenticators = await userService.GetAuthenticators(user_id);
+        let fido_devices = await userService.GetWebAuthn(user_id);
 
         const opts: GenerateAttestationOptionsOpts = {
           rpName: "Dotworld Technologies",
@@ -122,7 +126,7 @@ export default (app: Router) => {
           userName: `${first_name} ${last_name}`,
           timeout: 60000,
           attestationType: "indirect",
-          excludeCredentials: authenticators.map((dev) => ({
+          excludeCredentials: fido_devices.map((dev) => ({
             id: Buffer.from(dev.credentialID, "base64"),
             type: "public-key",
             transports: ["usb", "ble", "nfc", "internal"],
@@ -163,7 +167,7 @@ export default (app: Router) => {
         const body: AttestationCredentialJSON = req.body;
         const userService = Container.get(UserService);
 
-        let authenticators = await userService.GetAuthenticators(user_id);
+        let fido_devices = await userService.GetWebAuthn(user_id);
         let user = await userService.GetUser(user_id);
 
         const expectedChallenge = user.fido_challenge;
@@ -190,7 +194,7 @@ export default (app: Router) => {
           const { fmt, credentialPublicKey, credentialID, counter } =
             attestationInfo;
 
-          const existingDevice = authenticators.find(
+          const existingDevice = fido_devices.find(
             (device) =>
               device.credentialID ===
               Buffer.from(credentialID).toString("base64")
@@ -198,7 +202,7 @@ export default (app: Router) => {
 
           if (!existingDevice) {
             // Save the data to db
-            await userService.CreateAuthenticatorData(
+            await userService.CreateWebAuthnData(
               user_id,
               name,
               Buffer.from(credentialID).toString("base64"),
@@ -234,4 +238,112 @@ export default (app: Router) => {
       }
     }
   );
+
+  // HOTP
+  route.get(
+    "/authenticator",
+    passport.authenticate("jwt", { session: false }),
+    async (req: Request, res: Response, next: NextFunction) => {
+      const logger: Logger = Container.get("logger");
+      try {
+        let { id: user_id } = req.user;
+        const userService = Container.get(UserService);
+        const user = await userService.GetUser(user_id);
+
+        if (user.authenticator && user.authenticator.enabled === true) {
+          throw new HttpError(
+            400,
+            "Authenticator already enabled. Delete the old one to add new."
+          );
+        }
+
+        const secret = authenticator.generateSecret();
+        const otpauth = authenticator.keyuri(
+          user.email,
+          config.project_name,
+          secret
+        );
+
+        QRCode.toDataURL(otpauth, function (err, data_url) {
+          if (err) throw new HttpError(500, "Unable to generate qr code");
+          twofaSecretsTmp = {
+            [user_id]: secret,
+          };
+          res.write(data_url);
+          res.end();
+        });
+      } catch (e) {
+        logger.error("🔥 error: %o", e);
+        return next(e);
+      }
+    }
+  );
+
+  route.post(
+    "/authenticator/verify",
+    passport.authenticate("jwt", { session: false }),
+    async (req: Request, res: Response, next: NextFunction) => {
+      const logger: Logger = Container.get("logger");
+      try {
+        let { id: user_id } = req.user;
+        let { token } = req.body;
+        const userService = Container.get(UserService);
+
+        const user = await userService.GetUser(user_id);
+
+        if (user.authenticator && user.authenticator.enabled === true) {
+          throw new HttpError(
+            400,
+            "Authenticator already enabled. Delete the old one to add new."
+          );
+        }
+
+        try {
+          let secret = twofaSecretsTmp[user_id];
+          const isValid = authenticator.verify({ token, secret });
+
+          if (isValid) {
+            await userService.CreateAuthenticatorData(secret, user_id);
+            return res.json({
+              status: true,
+              data: {
+                verified: true,
+              },
+            });
+          } else {
+            delete twofaSecretsTmp[user_id];
+            throw new Error("Invalid verification code");
+          }
+        } catch (err) {
+          throw new HttpError(
+            400,
+            "Unable to verify.Please try again." + err.message
+          );
+        }
+      } catch (e) {
+        logger.error("🔥 error: %o", e);
+        return next(e);
+      }
+    }
+  );
+
+  route.delete(
+    "/authenticator",
+    passport.authenticate("jwt", { session: false }),
+    async (req: Request, res: Response, next: NextFunction) => {
+      const logger: Logger = Container.get("logger");
+      try {
+        let { id: user_id } = req.user;
+        const userService = Container.get(UserService);
+        await userService.RemoveAuthenticatorData(user_id);
+        
+        return res.json({
+          status: true
+        })
+        
+      } catch (e) {
+        logger.error("🔥 error: %o", e);
+        return next(e);
+      }
+    }
 };

@@ -160,12 +160,11 @@ export default (app: Router) => {
         const userService: UserService = Container.get(UserService);
 
         const user = await userService.GetUserByEmail(email);
-        // registered authenticators
-        const userAuthenticators = await userService.GetAuthenticators(user.id);
+        const fido_devices = await userService.GetWebAuthn(user.id);
 
         const opts: GenerateAssertionOptionsOpts = {
           timeout: 60000,
-          allowCredentials: userAuthenticators.map((dev) => ({
+          allowCredentials: fido_devices.map((dev) => ({
             id: Buffer.from(dev.credentialID, "base64"),
             type: "public-key",
             transports: ["usb", "ble", "nfc", "internal"],
@@ -199,12 +198,12 @@ export default (app: Router) => {
 
         const userService: UserService = Container.get(UserService);
         const user = await userService.GetUserByEmail(body.email);
-        const authenticators = await userService.GetAuthenticators(user.id);
+        const fido_devices = await userService.GetWebAuthn(user.id);
 
         const expectedChallenge = user.fido_challenge;
 
         const bodyCredIDBuffer = base64url.toBuffer(body.data.rawId);
-        const authenticator = authenticators.find(
+        const authenticator = fido_devices.find(
           (auths) =>
             auths.credentialID ===
             Buffer.from(bodyCredIDBuffer).toString("base64")
@@ -247,7 +246,8 @@ export default (app: Router) => {
           logger.info(
             `Updating new assertion count to ${assertionInfo.newCounter}`
           );
-          await userService.UpdateAuthenticatorsCounter(
+          logger.info("Credential Id is %o", assertionInfo.credentialID);
+          await userService.UpdateWebAuthnCounter(
             authenticator.id,
             assertionInfo.newCounter
           );

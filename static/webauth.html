@@ -9,10 +9,38 @@
     <script src="https://unpkg.com/@simplewebauthn/browser/dist/es2018/index.umd.min.js"></script>
   </head>
   <body>
+    <img id="qr" />
+
+    <br /><!-- This is a sample file so it is fine to use br -->
     <input type="text" id="email" />
     <button onclick="register()">Register</button>
     <button onclick="validate()">Authenticate</button>
     <script>
+      async function generateQR() {
+        setInterval(() => {
+          var myHeaders = new Headers();
+          myHeaders.append(
+            "Authorization",
+            "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQyZjQ2NDQzLWY4YmMtNDhlMS1iM2QyLWY3MmE1N2UwZjViZCIsImVtYWlsIjoibmF2ZWVuQGRvdHdvcmxkLmluIiwiaWF0IjoxNjIzNzQ3MTE2LCJleHAiOjE2MjQwMDYzMTZ9.M6Ibf2QiLa9I7GEdkNSi2htdjFZCVJ4XljjQjX7CFKQ3zb_RGbDqc3QEwqZx7qk3-L37xV3T7i0WyUaIMB2ullewwsXeqDCZFWYMhv-45ppvNg88luy75Hs4qWjGYXbQy5SH15XUaZvKVY5R8sAiz18oyhgmX8EJruURZThZEbLgV-nrgpbS2ST8wuoXjVKX3re-cH0ZxSzNSTll1ZZrr0GMxnexiGjxzjs5--H07frxh2Mlf2EPD9v0hTfnfi8SEixjGv3-bzyG5VUw_Ukmcg-k1t6uD9_ysM3ltAr8YOLmwBx6h7H396xOuLQHDtNVb70aXG8mvBfd47RaVxXgWg"
+          );
+
+          var requestOptions = {
+            method: "GET",
+            headers: myHeaders,
+            redirect: "follow",
+          };
+
+          fetch(
+            "http://localhost:8000/api/v1/users/authenticator",
+            requestOptions
+          )
+            .then((response) => response.text())
+            .then((result) => (document.querySelector("#qr").src = result))
+            .catch((error) => console.log("error", error));
+        }, 5 * 60 * 10000);
+      }
+      generateQR();
+
       async function register() {
         const { startAttestation } = SimpleWebAuthnBrowser;
         try {

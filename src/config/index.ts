@@ -8,10 +8,15 @@ if (envFound.error) {
 process.env.NODE_ENV = process.env.NODE_ENV || "development";
 process.env.PORT = process.env.PORT || "8000";
 export default {
+  project_name: process.env.PROJECT_NAME || "Name not provied",
   host: process.env.HOST || "127.0.0.1",
   rpID: process.env.HOST || "localhost",
   frontend: process.env.FRONTEND_URL || "",
   port: parseInt(process.env.PORT) || 8000,
+  redis: {
+    host: process.env.REDIS_HOST || "127.0.0.1",
+    port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT) : 6379,
+  },
   logs: {
     level: process.env.LOG_LEVEL || "silly",
   },

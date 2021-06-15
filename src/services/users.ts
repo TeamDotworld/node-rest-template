@@ -12,7 +12,7 @@ import {
   UserFcmOutputDTO,
 } from "../interface/User";
 import { HttpError, NotFoundError } from "../api/errors";
-import { Authenticators, PrismaClient, User } from "@prisma/client";
+import { Authenticator, PrismaClient, User, WebAuthn } from "@prisma/client";
 
 let eventDispatcher = new EventDispatcher();
 
@@ -44,11 +44,18 @@ export default class UserService {
     return users;
   }
 
-  public async GetUser(id: string): Promise<User> {
+  public async GetUser(id: string): Promise<
+    User & {
+      authenticator: Authenticator;
+    }
+  > {
     this.logger.silly("🤵 Finding user with id " + id);
     let user = await this.prisma.user.findUnique({
       where: {
         id,
+      },
+      include: {
+        authenticator: true,
       },
     });
 
@@ -241,7 +248,7 @@ export default class UserService {
     return created;
   }
 
-  public async CreateAuthenticatorData(
+  public async CreateWebAuthnData(
     user_id: string,
     name: string,
     credentialID: string,
@@ -249,10 +256,10 @@ export default class UserService {
     counter: number,
     _data: object,
     fmt: string = "unknown"
-  ): Promise<Authenticators> {
+  ): Promise<WebAuthn> {
     this.logger.silly("🤵 Update authentication data");
 
-    let created = await this.prisma.authenticators.create({
+    let created = await this.prisma.webAuthn.create({
       data: {
         name,
         counter: counter,
@@ -271,7 +278,7 @@ export default class UserService {
     return created;
   }
 
-  public async GetAuthenticators(user_id: string): Promise<Authenticators[]> {
+  public async GetWebAuthn(user_id: string): Promise<WebAuthn[]> {
     this.logger.silly("🤵 Getting authenticator data");
 
     let data = await this.prisma.user.findUnique({
@@ -279,25 +286,62 @@ export default class UserService {
         id: user_id,
       },
       select: {
-        authenticators: true,
+        fido_devices: true,
       },
     });
 
-    return data.authenticators;
+    return data.fido_devices;
   }
 
-  public async UpdateAuthenticatorsCounter(
+  public async UpdateWebAuthnCounter(
     auth_id: string,
     counter: number
-  ): Promise<Authenticators> {
+  ): Promise<WebAuthn> {
     this.logger.silly("🤵 Getting authenticator data");
 
-    let data = await this.prisma.authenticators.update({
+    let data = await this.prisma.webAuthn.update({
       where: {
         id: auth_id,
       },
       data: {
         counter: counter,
+      },
+    });
+
+    return data;
+  }
+
+  public async CreateAuthenticatorData(
+    secret: string,
+    user_id: string
+  ): Promise<Authenticator> {
+    this.logger.silly("🤵 Getting authenticator data");
+
+    let data = await this.prisma.authenticator.create({
+      data: {
+        secret,
+        enabled: true,
+        verified: true,
+        valid_till: new Date(),
+        user: {
+          connect: {
+            id: user_id,
+          },
+        },
+      },
+    });
+
+    return data;
+  }
+
+  public async RemoveAuthenticatorData(
+    user_id: string
+  ): Promise<Authenticator> {
+    this.logger.silly("🤵 Getting authenticator data");
+
+    let data = await this.prisma.authenticator.delete({
+      where: {
+        user_id
       },
     });
 

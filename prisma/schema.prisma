@@ -81,36 +81,47 @@ enum CallPriority {
 }
 
 model User {
-  id                  String           @id @default(uuid())
-  email               String           @unique
+  id                  String          @id @default(uuid())
+  email               String          @unique
   first_name          String
   middle_name         String?
   last_name           String?
   password            String
-  about               String           @default("")
-  email_verified      Boolean          @default(false)
-  blocked             Boolean          @default(false)
+  about               String          @default("")
+  email_verified      Boolean         @default(false)
+  blocked             Boolean         @default(false)
   last_ip             String?
-  last_login          DateTime         @default(now())
+  last_login          DateTime        @default(now())
   last_password_reset DateTime?
   magic_sent_time     DateTime?
-  user_idle_state     UserIdleState    @default(IDLE)
-  screen_idle_state   ScreenIdleState  @default(LOCKED)
+  user_idle_state     UserIdleState   @default(IDLE)
+  screen_idle_state   ScreenIdleState @default(LOCKED)
   roles               Role[]
   mobile              String?
-  mobile_verified     Boolean          @default(false)
-  country_code        Int              @default(0)
-  avatar              String           @default("https://www.gravatar.com/avatar/00000000000000000000000000000000")
+  mobile_verified     Boolean         @default(false)
+  country_code        Int             @default(0)
+  avatar              String          @default("https://www.gravatar.com/avatar/00000000000000000000000000000000")
   fcm_tokens          String[]
   locations           Location[]
-  credential_id       String           @default(uuid())
+  credential_id       String          @default(uuid())
   fido_challenge      String?
-  authenticators      Authenticators[]
-  created_at          DateTime         @default(now())
-  updated_at          DateTime         @updatedAt
+  fido_devices        WebAuthn[]
+  authenticator       Authenticator?
+  created_at          DateTime        @default(now())
+  updated_at          DateTime        @updatedAt
 }
 
-model Authenticators {
+model Authenticator {
+  id         String    @id @default(uuid())
+  enabled    Boolean   @default(false)
+  secret     String
+  valid_till DateTime?
+  verified   Boolean   @default(false)
+  user       User      @relation(fields: [user_id], references: [id])
+  user_id    String    @unique
+}
+
+model WebAuthn {
   id                  String  @id @default(uuid())
   name                String
   fmt                 String  @default("unknown")
