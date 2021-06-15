@@ -8,7 +8,11 @@ import config from "../../../config";
 import AuthService from "../../../services/auth";
 import middlewares from "../../../middlewares";
 import UserService from "../../../services/users";
-import { BadRequestError, UnauthorizedError } from "../../../api/errors";
+import {
+  BadRequestError,
+  HttpError,
+  UnauthorizedError,
+} from "../../../api/errors";
 import {
   generateAssertionOptions,
   GenerateAssertionOptionsOpts,
@@ -19,6 +23,7 @@ import {
 import { AuthenticatorDevice } from "@simplewebauthn/typescript-types";
 import helpers from "../../../helpers";
 import { AssertionCredentialJSONExtra } from "../../../interface/User";
+import { authenticator } from "otplib";
 
 const route = Router();
 
@@ -268,6 +273,58 @@ export default (app: Router) => {
           });
         }
         throw new UnauthorizedError("Verification of webauthn failed");
+      } catch (e) {
+        logger.error("🔥 error: %o", e);
+        return next(e);
+      }
+    }
+  );
+
+  // Authenticate using Authenticator app
+  route.post(
+    "/authenticator/login",
+    async (req: Request, res: Response, next: NextFunction) => {
+      const logger: Logger = Container.get("logger");
+      try {
+        let { email, token } = req.body;
+        const userService = Container.get(UserService);
+
+        const user = await userService.GetUserByEmail(email);
+        if (!user.authenticator || user.authenticator?.enabled === false) {
+          throw new HttpError(403, "Authenticator not enabled");
+        }
+
+        try {
+          const isValid = authenticator.verify({
+            token,
+            secret: user.authenticator.secret,
+          });
+
+          const token1 = authenticator.generate(user.authenticator.secret);
+          logger.info("token : " + token1);
+
+          if (isValid) {
+            let token = helpers.generateLoginToken(user);
+            return res.json({
+              status: true,
+              data: {
+                user: {
+                  id: user.id,
+                  email: user.email,
+                  name: `${user.first_name} ${user.last_name}`.trim(),
+                },
+                token,
+              },
+            });
+          } else {
+            throw new Error("Invalid verification code");
+          }
+        } catch (err) {
+          throw new HttpError(
+            400,
+            "Unable to verify.Please try again." + err.message
+          );
+        }
       } catch (e) {
         logger.error("🔥 error: %o", e);
         return next(e);

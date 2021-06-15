@@ -336,14 +336,14 @@ export default (app: Router) => {
         let { id: user_id } = req.user;
         const userService = Container.get(UserService);
         await userService.RemoveAuthenticatorData(user_id);
-        
+
         return res.json({
-          status: true
-        })
-        
+          status: true,
+        });
       } catch (e) {
         logger.error("🔥 error: %o", e);
         return next(e);
       }
     }
+  );
 };

@@ -70,11 +70,18 @@ export default class UserService {
     return user;
   }
 
-  public async GetUserByEmail(email: string): Promise<User> {
+  public async GetUserByEmail(email: string): Promise<
+    User & {
+      authenticator: Authenticator;
+    }
+  > {
     this.logger.silly("🤵 Finding user with email " + email);
     let user = await this.prisma.user.findUnique({
       where: {
         email: email,
+      },
+      include: {
+        authenticator: true,
       },
     });
 
@@ -341,7 +348,7 @@ export default class UserService {
 
     let data = await this.prisma.authenticator.delete({
       where: {
-        user_id
+        user_id,
       },
     });
 
