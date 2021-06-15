@@ -3,8 +3,9 @@ import { Logger } from "winston";
 import { Call, Device, PrismaClient } from "@prisma/client";
 
 import { HttpError } from "../api/errors";
-import Helper from "../helpers/index";
+import helper from "../helpers/index";
 import mqtt from "../loaders/mqtt";
+import bullmq from "../loaders/bullmq";
 
 @Service()
 export default class CallsService {
@@ -13,30 +14,35 @@ export default class CallsService {
     @Inject("prisma") private prisma: PrismaClient
   ) { }
 
-  public async CreateRoom(name: string, from: string, to: string[]): Promise<string> {
+  public async CreateRoom(name: string, from: string, to: string): Promise<Call> {
     this.logger.silly("💻 Creating new room");
-    const room = Helper.createRoom(name);
-    const room_id = (await room).sid
-    await this.prisma.call.create({
+    const room = await helper.createRoom(name);
+    const room_id = room.sid
+    const call = await this.prisma.call.create({
       data: {
         room_id,
         from,
         to,
       }
     });
-    return (await room).sid;
+    let token = await helper.createToken(room_id, to);
+    mqtt.sendMessage(`/dotworld/mdm/${to}`, {
+      room_id,
+      token
+    });
+    return call;
   }
 
-  public async AccessToken(
+  public async GetAccessToken(
     room_id: string,
     identity: string
   ): Promise<string> {
     this.logger.silly("💻 Getting access token");
-    let token = await Helper.createToken(room_id, identity);
+    let token = await helper.createToken(room_id, identity);
     return token;
   }
 
-  public async Initiate(room_id: string, device: string): Promise<Device> {
+  public async AddParticipant(room_id: string, device: string): Promise<Device> {
     this.logger.silly("💻 Sending MQTT message");
     let isExist = await this.prisma.device.findUnique({
       where: {
@@ -45,19 +51,30 @@ export default class CallsService {
     });
 
     if (!isExist) throw new HttpError(400, "invalid device");
-    let token = await Helper.createToken(room_id, device);
+    let token = await helper.createToken(room_id, device);
 
-    mqtt.sendMessage(`/dotworld/mdm/${isExist.id}`, {
+    mqtt.sendMessage(`/dotworld/mdm/${device}`, {
       room_id,
       token
     });
 
+    await this.prisma.call.update({
+      where: {
+        room_id
+      },
+      data: {
+        to: {
+          push: device
+        }
+      }
+    })
+
     return isExist;
   }
 
-  public async Disconnect(room_id: string): Promise<Call> {
+  public async DisconnectRoom(room_id: string): Promise<Call> {
     this.logger.silly("🔥 Disconnecting room");
-    let room = await Helper.closeRoom(room_id);
+    let room = await helper.closeRoom(room_id);
     let callLog = await this.prisma.call.update({
       where: {
         room_id
@@ -71,6 +88,7 @@ export default class CallsService {
     return callLog;
   }
 
+  //todo- remove
   public async Notification(device: Device): Promise<any[]> {
     this.logger.silly("🔥 Disconnecting room");
     if (device.call_priority === "SECURITY_PHONE") {
@@ -81,7 +99,7 @@ export default class CallsService {
         }
       });
 
-      Helper.notifySecuritys(availableSecurity, device);
+      await bullmq.sosQueue.add(device.id + Date.now(), { list: availableSecurity, device });
       return availableSecurity;
 
     } else {
@@ -99,7 +117,7 @@ export default class CallsService {
           }
         }
       });
-      Helper.notifyUsers(users, device);
+      await bullmq.sosQueue.add(device.id + Date.now(), { list: users, device });
       return users;
     }
   }

@@ -5,7 +5,7 @@ import passport from "passport";
 
 import CallsService from "../../../services/calls";
 import helper from "../../../helpers/index";
-import { Device } from "@prisma/client";
+import middlewares from "../../../middlewares";
 
 const route = Router();
 
@@ -14,6 +14,7 @@ export default (app: Router) => {
 
 	route.put(
 		"/room",
+		middlewares.validation.createRoomSchema,
 		passport.authenticate("jwt", { session: false }),
 		async (req: Request, res: Response, next: NextFunction) => {
 			const logger: Logger = Container.get("logger");
@@ -36,15 +37,15 @@ export default (app: Router) => {
 	);
 
 	route.get("/token",
+		middlewares.validation.twilioRoomIdSchema,
 		passport.authenticate("jwt", { session: false }),
 		async (req: Request, res: Response, next: NextFunction) => {
 			const logger: Logger = Container.get("logger");
 			try {
 				let { room_id } = req.body;
 				let { id: identity } = req.user;
-				identity = identity || req.device.id;
 				const callServiceInstance = Container.get(CallsService);
-				const token = await callServiceInstance.AccessToken(room_id, identity);
+				const token = await callServiceInstance.GetAccessToken(room_id, identity);
 				return res.json({
 					status: true,
 					data: token,
@@ -57,15 +58,15 @@ export default (app: Router) => {
 
 	route.put(
 		"/initiate",
+		middlewares.validation.initiateCallSchema,
 		passport.authenticate("jwt", { session: false }),
 		async (req: Request, res: Response, next: NextFunction) => {
-			console.log(req);
 			const logger: Logger = Container.get("logger");
 			logger.debug("Sending MQTT message to device: %o", req.body);
 			try {
 				const { device, room_id } = req.body;
 				const callServiceInstance = Container.get(CallsService);
-				const informedDevices = await callServiceInstance.Initiate(room_id, device)
+				const informedDevices = await callServiceInstance.AddParticipant(room_id, device)
 				return res.json({
 					status: true,
 					data: {
@@ -80,29 +81,8 @@ export default (app: Router) => {
 	);
 
 	route.put(
-		"/notification",
-		passport.authenticate("jwt", { session: false }),
-		async (req: Request, res: Response, next: NextFunction) => {
-			const logger: Logger = Container.get("logger");
-			logger.debug("Sending notifications: %o", req.body);
-			try {
-				let device: Device = req.device;
-				const callServiceInstance = Container.get(CallsService);
-				const address = await callServiceInstance.Notification(device);
-
-				return res.json({
-					status: true,
-					data: address,
-				});
-			} catch (e) {
-				logger.error("🔥 error: %o", e);
-				return next(e);
-			}
-		}
-	);
-
-	route.put(
 		"/disconnect",
+		middlewares.validation.twilioRoomIdSchema,
 		passport.authenticate("jwt", { session: false }),
 		async (req: Request, res: Response, next: NextFunction) => {
 			const logger: Logger = Container.get("logger");
@@ -110,7 +90,7 @@ export default (app: Router) => {
 			try {
 				const { room_id } = req.body;
 				const callServiceInstance = Container.get(CallsService);
-				const callLog = await callServiceInstance.Disconnect(room_id);
+				const callLog = await callServiceInstance.DisconnectRoom(room_id);
 
 				return res.json({
 					status: true,

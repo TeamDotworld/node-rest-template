@@ -51,4 +51,9 @@ export default {
     subscription: process.env.MQTT_SUBSCRIPTION || "",
     reconnect: parseInt(process.env.MQTT_RECONNECT) || 10 * 1000,
   },
+  bullMq: {
+    host: process.env.BULL_MQ_HOST,
+    port: Number(process.env.BULL_MQ_PORT),
+    password: process.env.BULL_MQ_PASSWORD
+  }
 };

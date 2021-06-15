@@ -61,10 +61,34 @@ const deviceTokenSchema = celebrate({
   }),
 });
 
+const createRoomSchema = celebrate({
+  [Segments.BODY]: Joi.object({
+    initiator: Joi.string().required(),
+    from: Joi.string().uuid().required(),
+    to: Joi.string().uuid().required(),
+  }),
+})
+
+const twilioRoomIdSchema = celebrate({
+  [Segments.BODY]: Joi.object({
+    room_id: Joi.string().alphanum().length(34).required(),
+  }),
+})
+
+const initiateCallSchema = celebrate({
+  [Segments.BODY]: Joi.object({
+    room_id: Joi.string().alphanum().length(34).required(),
+    device: Joi.string().uuid().required(),
+  }),
+})
+
 export default {
   loginSchema,
   tokenExchangeSchema,
   newDeviceSchema,
   uuidParam,
   deviceTokenSchema,
+  createRoomSchema,
+  twilioRoomIdSchema,
+  initiateCallSchema
 };

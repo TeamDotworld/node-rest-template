@@ -74,7 +74,7 @@ export default ({ app }: { app: Express }) => {
   app.use((error: any, _req: Request, res: Response, _next: any) => {
     return res.json({
       status: false,
-      message: error.message || "internal server erro",
+      message: error.message || "internal server error",
     });
   });
 

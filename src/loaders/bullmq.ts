@@ -1,19 +1,44 @@
-var Queue = require('bull');
+import { Queue, Worker } from 'bullmq';
+import notify from "../jobs/bullmq";
+import Logger from "./logger";
+import config from "../config";
 
-var sosQueue = new Queue('sos-call', { redis: { port: 6379, host: '127.0.0.1', password: 'foobared' } }); // Specify Redis connection using object
-sosQueue.process(function (job, done) {
-	// transcode image asynchronously and report progress
-	job.progress(42);
-
-	// call done when finished
-	done();
-
-	// or give a error if error
-	done(new Error('error sos'));
-
-	// or pass it a result
-	done(null, { width: 1280, height: 720 /* etc... */ });
-
-	// If the job throws an unhandled exception it is also handled correctly
-	throw new Error('some unexpected error');
+const sosQueue = new Queue('sos-call', {
+	connection: {
+		...config.bullMq
+	}
 });
+
+const sosWorker = new Worker('sos-call', async (job) => {
+	Logger.info(`Worker picked the job ${job.id}`);
+	if (job?.data?.device?.call_priority === "SECURITY_PHONE") {
+		notify.notifySecuritys(job);
+	} else {
+		notify.notifyUsers(job);
+	}
+}, {
+	connection: {
+		...config.bullMq
+	}
+});
+
+sosQueue.on('waiting', ({ id }) => {
+	Logger.info(`A job with ID ${id} is waiting`);
+});
+
+sosQueue.on('active', ({ id, prev }) => {
+	Logger.info(`Job ${id} is now active; previous status was ${prev}`);
+});
+
+sosQueue.on('completed', ({ id, returnvalue }) => {
+	Logger.info(`${id} has completed and returned ${returnvalue}`);
+});
+
+sosQueue.on('failed', ({ id, failedReason }) => {
+	Logger.warn(`${id} has failed with reason ${failedReason}`);
+});
+
+export default {
+	sosQueue,
+	sosWorker
+};
