@@ -1,15 +1,15 @@
 const JwtStrategy = require("passport-jwt").Strategy;
 const ExtractJwt = require("passport-jwt").ExtractJwt;
-import { NextFunction } from "express";
+import { NextFunction,Request,Response } from "express";
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient,Status } from "@prisma/client";
 import { PassportStatic } from "passport";
 import { StrategyOptions } from "passport-jwt";
 
 import { Logger } from "winston";
 import { Container } from "typedi";
 import config from "../config";
-import { HttpError } from "../api/errors";
+import { HttpError,UnauthorizedError,BadRequestError } from "../api/errors";
 
 var opts: StrategyOptions = {
   secretOrKey: config?.keys?.public?.replace(/\\n/gm, "\n"),
@@ -96,27 +96,47 @@ export const checkRole =
     }
   };
 
-export const validateDevice = () => async (req, _, next: NextFunction) => {
-  const logger: Logger = Container.get("logger");
-  try {
-    let { id: device_id } = req.params;
-    let { device_token } = req.body;
-
-    let device = await prisma.device.findFirst({
-      where: {
-        id: device_id,
-        token: device_token,
-      },
-    });
-
-    if (!device) {
-      throw new HttpError(401, "Unauthorized");
+  export const validateDevice = async (
+    req: Request,
+    _: Response,
+    next: NextFunction
+  ) => {
+    const logger: Logger = Container.get("logger");
+    logger.info(`🤖 Authenticating device`);
+    try {
+      var access = req.headers.authorization;
+      if (!access) throw new UnauthorizedError("Unauthorized");
+  
+      let data = Buffer.from(access.split(" ")[1], "base64").toString();
+      if (!data) throw new BadRequestError("Bad request");
+  
+      let [id, token] = data.split(":");
+      if (!id || !token) {
+        throw new BadRequestError("Invalid authorization");
+      }
+  
+      let device = await prisma.device.findFirst({
+        where: {
+          AND: [{ id: id }, { token: token }, { blocked: false }],
+        },
+      });
+      if (!device) {
+        throw new HttpError(401, "Unauthorized");
+      }
+  
+      if (device.status === Status.OFFLINE) {
+        await prisma.device.update({
+          where: { id: device.id },
+          data: {
+            status: Status.ONLINE,
+          },
+        });
+      }
+      req.device = device;
+  
+      next();
+    } catch (e) {
+      logger.error("🔥 This device is not allowed");
+      next(e);
     }
-    req.device = device;
-
-    next();
-  } catch (e) {
-    logger.error("🔥 This device is not allowed");
-    throw e;
-  }
-};
+  };

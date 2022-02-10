@@ -17,35 +17,8 @@ const tokenExchangeSchema = celebrate({
 const newDeviceSchema = celebrate({
   [Segments.BODY]: Joi.object({
     id: Joi.string().uuid().required(),
+    token: Joi.string().required(),
     name: Joi.string().required(),
-    can_call: Joi.boolean().required(),
-    can_screen_share: Joi.boolean().default(false).optional(),
-    supported_modes: Joi.array().items(Joi.string().uuid()).required(),
-    call_provider: Joi.string()
-      .valid(CallProvider.AGORA, CallProvider.TWILIO, CallProvider.SIP)
-      .required(),
-    os_type: Joi.string()
-      .valid(
-        OSType.ANDROID,
-        OSType.EMBEDDED,
-        OSType.IOS,
-        OSType.LINUX,
-        OSType.MAC,
-        OSType.UNKNOWN,
-        OSType.WINDOWS
-      )
-      .required(),
-    device_type: Joi.string().valid(
-      DeviceType.INTERCOM,
-      DeviceType.KIOSK,
-      DeviceType.SECURITY_PHONE,
-      DeviceType.UNASSIGNED,
-      DeviceType.VIRTUAL_CHARACTER,
-      DeviceType.VIZITIN,
-      DeviceType.CAMERA
-    ),
-    device_sub_type: Joi.string().optional(),
-    can_give_telemetry: Joi.boolean().optional(),
   }),
 });
 

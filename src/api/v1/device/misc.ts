@@ -10,27 +10,23 @@ import middlewares from "../../../middlewares";
 const route = Router();
 
 export default (app: Router) => {
-  app.use("/setup/devices", route);
+  app.use("/ds", route);
 
   route.post(
-    "/",
+    "/setup",
     middlewares.validation.newDeviceSchema,
     async (req: Request, res: Response, next: NextFunction) => {
       const logger: Logger = Container.get("logger");
       try {
-        let data = req.body;
         const deviceService = Container.get(DeviceService);
-        const device = await deviceService.CreateDevice({
-          ...data,
-          blocked: true,
-        });
+        const device = await deviceService.CreateDevice(req.body);
 
         return res.json({
           status: true,
           data: {
             id: device.id,
+            token: device.token,
             name: device.name,
-            is_live_supported: device.name,
           },
         });
       } catch (e) {
@@ -40,6 +36,7 @@ export default (app: Router) => {
     }
   );
 
+  
   // Get device config
   route.get(
     "/:id/config",
