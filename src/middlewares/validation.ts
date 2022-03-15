@@ -16,9 +16,29 @@ const tokenExchangeSchema = celebrate({
 
 const newDeviceSchema = celebrate({
   [Segments.BODY]: Joi.object({
-    id: Joi.string().uuid().required(),
-    token: Joi.string().required(),
+    token: Joi.string().uuid().required(),
     name: Joi.string().required(),
+    device_type: Joi.string()
+      .valid(
+        DeviceType.DIGITAL_SIGNAGE,
+        DeviceType.MOBILE,
+        DeviceType.MONITOR,
+        DeviceType.UNASSIGNED
+      )
+      .required(),
+    os_type: Joi.string()
+      .valid(
+        OSType.ANDROID,
+        OSType.EMBEDDED,
+        OSType.IOS,
+        OSType.LINUX,
+        OSType.MAC,
+        OSType.UNKNOWN,
+        OSType.WINDOWS
+      )
+      .required(),
+    device_sub_type: Joi.string().optional(),
+    can_give_telemetry: Joi.boolean().optional(),
   }),
 });
 
