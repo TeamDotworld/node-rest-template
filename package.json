@@ -68,7 +68,7 @@
     "randomstring": "^1.2.1",
     "reflect-metadata": "^0.1.13",
     "speakeasy": "^2.0.0",
-    "tsconfig-paths": "^3.9.0",
+    "tsconfig-paths": "^3.10.1",
     "twilio": "^3.63.0",
     "twilio-video": "^2.14.0",
     "typedi": "^0.10.0",
